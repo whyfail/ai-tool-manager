@@ -4,10 +4,9 @@ use std::str::FromStr;
 
 use crate::agents::{detect_all_agents, DetectedAgent};
 use crate::app_state::AppState;
-use crate::database::{McpApps, McpServer, McpServerSpec};
+use crate::database::McpApps;
 use crate::import::import_from_path;
 use crate::mcp::AppType;
-use std::collections::HashMap;
 use std::process::Command;
 
 /// 检测到的 Agent 信息（前端用）
@@ -60,7 +59,7 @@ pub async fn sync_agent_mcp(
         .filter_map(|id| AppType::from_str(id).ok())
         .collect();
 
-    for (id, mut server) in imported.servers {
+    for (_id, mut server) in imported.servers {
         // 设置启用的应用
         let mut apps = McpApps::default();
         for app in &enabled_apps_set {

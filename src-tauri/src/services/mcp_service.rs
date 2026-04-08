@@ -1,6 +1,4 @@
 use indexmap::IndexMap;
-use tauri::State;
-
 use crate::app_state::AppState;
 use crate::database::McpServer;
 use crate::error::AppError;
