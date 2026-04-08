@@ -31,7 +31,12 @@ pub fn sync_app_config(app: &AppType, servers: &[McpServer]) -> Result<(), AppEr
     };
 
     // 构建 MCP 服务器对象
-    let mcp_servers = build_mcp_json(servers);
+    // OpenCode 使用专用的配置格式
+    let mcp_servers = if matches!(app, AppType::OpenCode) {
+        build_opencode_mcp_json(servers)
+    } else {
+        build_mcp_json(servers)
+    };
 
     // 根据应用类型确定键名
     let key = match app {
@@ -135,22 +140,68 @@ fn build_mcp_json(servers: &[McpServer]) -> serde_json::Map<String, serde_json::
     mcp_servers
 }
 
-/// 同步所有启用了 MCP 的应用
-pub fn sync_all_live_configs(servers: &IndexMap<String, McpServer>) -> Result<(), AppError> {
-    // 按应用分组
-    let mut apps: std::collections::HashMap<AppType, Vec<&McpServer>> = std::collections::HashMap::new();
-    for server in servers.values() {
-        for app in AppType::all() {
-            if server.apps.is_enabled_for(&app) {
-                apps.entry(app.clone()).or_default().push(server);
+/// 为 OpenCode 构建 MCP 服务器配置（符合 opencode schema）
+/// OpenCode 要求: type 必填, command 是 string[] (命令+参数合并), 环境变量用 environment
+fn build_opencode_mcp_json(servers: &[McpServer]) -> serde_json::Map<String, serde_json::Value> {
+    let mut mcp_servers = serde_json::Map::new();
+    for server in servers {
+        let mut entry = serde_json::Map::new();
+
+        // 判断连接类型：有 url 则为 remote，否则为 local
+        if server.server.url.is_some() {
+            entry.insert("type".to_string(), serde_json::Value::String("remote".to_string()));
+            if let Some(url) = &server.server.url {
+                entry.insert("url".to_string(), serde_json::Value::String(url.clone()));
+            }
+            if let Some(headers) = &server.server.headers {
+                let headers_map: serde_json::Map<String, serde_json::Value> = headers
+                    .iter()
+                    .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                    .collect();
+                entry.insert("headers".to_string(), serde_json::Value::Object(headers_map));
+            }
+        } else {
+            entry.insert("type".to_string(), serde_json::Value::String("local".to_string()));
+            // OpenCode 的 command 是 string[]，合并 command + args
+            let mut command_vec: Vec<serde_json::Value> = Vec::new();
+            if let Some(cmd) = &server.server.command {
+                command_vec.push(serde_json::Value::String(cmd.clone()));
+            }
+            if let Some(args) = &server.server.args {
+                for arg in args {
+                    command_vec.push(serde_json::Value::String(arg.clone()));
+                }
+            }
+            if !command_vec.is_empty() {
+                entry.insert("command".to_string(), serde_json::Value::Array(command_vec));
+            }
+            // OpenCode 用 environment 而非 env
+            if let Some(env) = &server.server.env {
+                if !env.is_empty() {
+                    let env_map: serde_json::Map<String, serde_json::Value> = env
+                        .iter()
+                        .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                        .collect();
+                    entry.insert("environment".to_string(), serde_json::Value::Object(env_map));
+                }
             }
         }
-    }
 
-    // 同步每个应用
-    for (app, servers) in apps {
-        let owned_servers: Vec<McpServer> = servers.into_iter().cloned().collect();
-        sync_app_config(&app, &owned_servers)?;
+        mcp_servers.insert(server.id.clone(), serde_json::Value::Object(entry));
+    }
+    mcp_servers
+}
+
+/// 同步所有应用的 MCP 配置（包括没有任何启用服务器的应用，以清除残留配置）
+pub fn sync_all_live_configs(servers: &IndexMap<String, McpServer>) -> Result<(), AppError> {
+    // 遍历所有应用类型，确保即使没有启用服务器也会同步（清除配置文件中的残留）
+    for app in AppType::all() {
+        let app_servers: Vec<McpServer> = servers
+            .values()
+            .filter(|s| s.apps.is_enabled_for(&app))
+            .cloned()
+            .collect();
+        sync_app_config(&app, &app_servers)?;
     }
 
     Ok(())

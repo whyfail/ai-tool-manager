@@ -378,18 +378,6 @@ const McpServerRow: React.FC<McpServerRowProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
             <h3 className="text-sm font-semibold truncate">{server.name}</h3>
-            {server.tags && server.tags.length > 0 && (
-              <div className="hidden sm:flex gap-1 flex-shrink-0">
-                {server.tags.slice(0, 2).map((tag, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] rounded text-[10px] font-medium uppercase tracking-wider"
-                  >
-                    {tag.replace("imported-from-", "")}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
           {server.description && (
             <p className="text-xs text-[hsl(var(--muted-foreground))] line-clamp-2">

@@ -200,11 +200,30 @@ fn parse_server_config(id: &str, config: &serde_json::Value, app: &AppType) -> O
     let config_obj = config.as_object()?;
 
     // 提取基本字段
-    let command = config_obj.get("command").and_then(|v| v.as_str()).map(String::from);
-    let args = config_obj.get("args").and_then(|v| v.as_array()).map(|arr| {
-        arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()
-    });
-    let env = config_obj.get("env").and_then(|v| {
+    // OpenCode 格式: command 是 string[] (如 ["npx", "-y", "xxx"])，无 args
+    // 其他工具格式: command 是 string，args 是 string[]
+    let (command, args) = if let Some(cmd_val) = config_obj.get("command") {
+        if let Some(arr) = cmd_val.as_array() {
+            // command 是数组 (OpenCode 格式): 第一个元素作为 command，其余作为 args
+            let mut items: Vec<String> = arr.iter().filter_map(|v| v.as_str().map(String::from)).collect();
+            let cmd = items.first().map(|s| s.clone());
+            let a = if items.len() > 1 { Some(items.split_off(1)) } else { None };
+            (cmd, a)
+        } else {
+            // command 是字符串 (标准格式)
+            let cmd = cmd_val.as_str().map(String::from);
+            let a = config_obj.get("args").and_then(|v| v.as_array()).map(|arr| {
+                arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()
+            });
+            (cmd, a)
+        }
+    } else {
+        (None, None)
+    };
+    // 同时支持 "env" (标准格式) 和 "environment" (OpenCode 格式)
+    let env = config_obj.get("env")
+        .or_else(|| config_obj.get("environment"))
+        .and_then(|v| {
         v.as_object().map(|obj| {
             obj.iter()
                 .filter_map(|(k, v)| v.as_str().map(|vs| (k.clone(), vs.to_string())))
