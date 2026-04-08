@@ -2,11 +2,11 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::database::{McpApps, McpServer, McpServerSpec};
 use crate::mcp::AppType;
-use crate::agents::{get_agent_config_paths, resolve_path};
+use crate::agents::get_agent_config_paths;
 
 /// 导入结果
 pub struct ImportResult {

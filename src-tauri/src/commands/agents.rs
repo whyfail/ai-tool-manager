@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::str::FromStr;
 
-use crate::agents::{detect_all_agents, DetectedAgent, resolve_path, get_agent_config_paths};
+use crate::agents::{detect_all_agents, DetectedAgent, get_agent_config_paths};
 use crate::app_state::AppState;
 use crate::database::McpApps;
 use crate::import::import_from_path;
