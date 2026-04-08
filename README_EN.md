@@ -76,19 +76,25 @@ cp -R /Volumes/MCP\ Manager/MCP\ Manager.app /Applications/
 
 Since the current version is not code-signed or notarized by Apple, macOS Gatekeeper may block it on first launch, showing **"Cannot be verified"** or **"File is damaged"**. Follow these steps to allow it:
 
-**Method 1 (Recommended - Right-Click Open):**
+**Method 1 (Terminal Command - Recommended for "File is Damaged" error):**
+1. Drag the app to your `/Applications` folder
+2. Open **Terminal** and run the following command:
+   ```bash
+   sudo xattr -cr "/Applications/MCP Manager.app"
+   ```
+3. Enter your Mac password and press Enter (characters won't be displayed). Once the command finishes, you can double-click to open.
+
+**Method 2 (Right-Click Open):**
 1. Locate `MCP Manager.app` in `Finder`
 2. **Right-click** (or `Control + Click`) the app icon
 3. Select **"Open"** from the context menu
 4. Click **"Open"** again in the system warning dialog
 
-**Method 2 (System Settings):**
+**Method 3 (System Settings):**
 1. Open **System Settings** -> **Privacy & Security**
 2. Scroll down to the **Security** section
 3. Find the message `"MCP Manager" was blocked from use...`
 4. Click **"Open Anyway"** and enter your password if prompted
-
-> 💡 **Why does this happen?** This is Apple's standard security measure for unsigned applications. The app is open-source and completely safe. Code signing and notarization will be added in future releases.
 
 ### First Use
 
