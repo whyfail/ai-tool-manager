@@ -33,5 +33,15 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": false,
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/whyfail/mcp-manager/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

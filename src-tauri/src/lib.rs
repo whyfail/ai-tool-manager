@@ -18,6 +18,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // 初始化数据库
             let db = Database::new()?;
@@ -69,6 +71,9 @@ pub fn run() {
             commands::agents::detect_agents,
             commands::agents::sync_agent_mcp,
             commands::agents::open_config_file,
+            // 更新命令
+            commands::update::check_update,
+            commands::update::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

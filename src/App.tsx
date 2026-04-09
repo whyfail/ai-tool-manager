@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import UnifiedMcpPanel from "@/components/mcp/UnifiedMcpPanel";
+import UpdateModal from "@/components/mcp/UpdateModal";
 import {
   Database,
   Settings,
@@ -7,7 +8,11 @@ import {
   Moon,
   Sun,
   Monitor,
+  ArrowUpCircle,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 
 type Tab = "mcp" | "settings" | "about";
 type Theme = "light" | "dark" | "system";
@@ -145,6 +150,53 @@ const SettingsTab: React.FC = () => {
     { name: "CodeBuddy", path: "~/.codebuddy/mcp.json" },
   ];
 
+  const [checking, setChecking] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{
+    version: string;
+    body: string;
+  } | null>(null);
+  const [isLatest, setIsLatest] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  const checkUpdate = async () => {
+    setChecking(true);
+    setUpdateInfo(null);
+    setIsLatest(false);
+    try {
+      const result = await invoke<{
+        available: boolean;
+        version: string;
+        body: string | null;
+      }>("check_update");
+      if (result.available) {
+        setUpdateInfo({
+          version: result.version,
+          body: result.body || "",
+        });
+        setShowModal(true);
+      } else {
+        setIsLatest(true);
+        setTimeout(() => setIsLatest(false), 3000);
+      }
+    } catch (err) {
+      console.error("检查更新失败:", err);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    setInstalling(true);
+    try {
+      await invoke("install_update");
+    } catch (err) {
+      console.error("安装更新失败:", err);
+    } finally {
+      setInstalling(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* 头部 */}
@@ -158,6 +210,34 @@ const SettingsTab: React.FC = () => {
       {/* 内容 */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-2xl space-y-6">
+          {/* 检查更新 */}
+          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+            <h3 className="text-base font-medium mb-4">软件更新</h3>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={checkUpdate}
+                disabled={checking}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+              >
+                {checking ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <ArrowUpCircle size={16} />
+                )}
+                {checking ? "检查中..." : "检查更新"}
+              </button>
+              {isLatest && (
+                <span className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle size={14} />
+                  已是最新版本
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-3">
+              当前版本 v1.0.0 · 更新源：GitHub Releases
+            </p>
+          </section>
+
           {/* 数据库 */}
           <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
             <h3 className="text-base font-medium mb-4">数据存储</h3>
@@ -192,6 +272,16 @@ const SettingsTab: React.FC = () => {
           </section>
         </div>
       </div>
+
+      {/* 更新弹窗 */}
+      <UpdateModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        version={updateInfo?.version || ""}
+        body={updateInfo?.body || ""}
+        onInstall={installUpdate}
+        installing={installing}
+      />
     </div>
   );
 };
