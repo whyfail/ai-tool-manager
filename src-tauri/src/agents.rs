@@ -111,6 +111,13 @@ pub fn get_agent_config_paths(app: &AppType) -> Vec<PathBuf> {
                 vec!["~/Library/Application Support/Trae CN/User/mcp.json"]
             }
         }
+        AppType::TraeSoloCn => {
+            if cfg!(windows) {
+                vec!["%APPDATA%\\TRAE SOLO CN\\User\\mcp.json"]
+            } else {
+                vec!["~/Library/Application Support/TRAE SOLO CN/User/mcp.json"]
+            }
+        }
         AppType::Qoder => {
             if cfg!(windows) {
                 vec!["%USERPROFILE%\\.qoder\\settings.json"]
@@ -140,9 +147,48 @@ pub fn get_agent_name(app: &AppType) -> String {
         AppType::OpenClaw => "OpenClaw".to_string(),
         AppType::Trae => "Trae".to_string(),
         AppType::TraeCn => "Trae CN".to_string(),
+        AppType::TraeSoloCn => "TRAE SOLO CN".to_string(),
         AppType::Qoder => "Qoder".to_string(),
         AppType::CodeBuddy => "CodeBuddy".to_string(),
     }
+}
+
+/// 获取 Agent 工具的安装检测目录（用于判断工具是否已安装）
+pub fn get_agent_detect_dir(app: &AppType) -> Option<PathBuf> {
+    let path_str = match app {
+        AppType::QwenCode => "~/.qwen",
+        AppType::Claude => {
+            if cfg!(windows) { "%USERPROFILE%\\.claude" } else { "~/.claude" }
+        }
+        AppType::Codex => {
+            if cfg!(windows) { "%USERPROFILE%\\.codex" } else { "~/.codex" }
+        }
+        AppType::Gemini => {
+            if cfg!(windows) { "%USERPROFILE%\\.gemini" } else { "~/.gemini" }
+        }
+        AppType::OpenCode => {
+            if cfg!(windows) { "%USERPROFILE%\\.config\\opencode" } else { "~/.config/opencode" }
+        }
+        AppType::OpenClaw => {
+            if cfg!(windows) { "%USERPROFILE%\\.openclaw" } else { "~/.openclaw" }
+        }
+        AppType::Trae => {
+            if cfg!(windows) { "%APPDATA%\\Trae" } else { "~/Library/Application Support/Trae" }
+        }
+        AppType::TraeCn => {
+            if cfg!(windows) { "%APPDATA%\\Trae CN" } else { "~/Library/Application Support/Trae CN" }
+        }
+        AppType::TraeSoloCn => {
+            if cfg!(windows) { "%APPDATA%\\TRAE SOLO CN" } else { "~/Library/Application Support/TRAE SOLO CN" }
+        }
+        AppType::Qoder => {
+            if cfg!(windows) { "%USERPROFILE%\\.qoder" } else { "~/.qoder" }
+        }
+        AppType::CodeBuddy => {
+            if cfg!(windows) { "%USERPROFILE%\\.codebuddy" } else { "~/.codebuddy" }
+        }
+    };
+    Some(resolve_path(path_str))
 }
 
 /// 统计配置文件中的 MCP 服务器数量
@@ -192,19 +238,26 @@ pub fn detect_all_agents() -> Vec<DetectedAgent> {
     AppType::all()
         .iter()
         .map(|app| {
+            // 优先检测应用目录是否存在（判断工具是否已安装）
+            let detect_dir = get_agent_detect_dir(app);
+            let dir_exists = detect_dir.as_ref().map(|p| p.exists()).unwrap_or(false);
+
+            // 如果目录存在，再检测配置文件
             let paths = get_agent_config_paths(app);
             let mut found_path: Option<&PathBuf> = None;
 
-            for p in &paths {
-                if p.exists() {
-                    found_path = Some(p);
-                    break;
+            if dir_exists {
+                for p in &paths {
+                    if p.exists() {
+                        found_path = Some(p);
+                        break;
+                    }
                 }
             }
 
-            let exists = found_path.is_some();
-            let mcp_count = if exists {
-                count_mcp_in_config(found_path.unwrap())
+            let exists = dir_exists;
+            let mcp_count = if let Some(config_path) = found_path {
+                count_mcp_in_config(config_path)
             } else {
                 0
             };
@@ -214,6 +267,7 @@ pub fn detect_all_agents() -> Vec<DetectedAgent> {
                 name: get_agent_name(app),
                 config_path: found_path
                     .map(|p| p.to_string_lossy().to_string())
+                    .or_else(|| detect_dir.map(|p| p.to_string_lossy().to_string()))
                     .unwrap_or_default(),
                 exists,
                 mcp_count,

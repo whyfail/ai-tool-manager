@@ -48,4 +48,6 @@ export const SUPPORTED_APPS: Array<{ id: string; name: string; icon: string }> =
   { id: "opencode", name: "OpenCode", icon: "opencode" },
   { id: "openclaw", name: "OpenClaw", icon: "openclaw" },
   { id: "trae", name: "Trae", icon: "trae" },
+  { id: "trae-cn", name: "Trae CN", icon: "trae-cn" },
+  { id: "trae-solo-cn", name: "TRAE SOLO CN", icon: "trae-solo-cn" },
 ];

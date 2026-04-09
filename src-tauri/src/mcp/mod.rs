@@ -19,6 +19,8 @@ pub enum AppType {
     Trae,
     #[serde(rename = "trae-cn")]
     TraeCn,
+    #[serde(rename = "trae-solo-cn")]
+    TraeSoloCn,
     #[serde(rename = "qoder")]
     Qoder,
     #[serde(rename = "codebuddy")]
@@ -36,6 +38,7 @@ impl AppType {
             Self::OpenClaw,
             Self::Trae,
             Self::TraeCn,
+            Self::TraeSoloCn,
             Self::Qoder,
             Self::CodeBuddy,
         ]
@@ -51,6 +54,7 @@ impl AppType {
             Self::OpenClaw => "openclaw",
             Self::Trae => "trae",
             Self::TraeCn => "trae-cn",
+            Self::TraeSoloCn => "trae-solo-cn",
             Self::Qoder => "qoder",
             Self::CodeBuddy => "codebuddy",
         }
@@ -70,6 +74,7 @@ impl std::str::FromStr for AppType {
             "openclaw" => Ok(Self::OpenClaw),
             "trae" => Ok(Self::Trae),
             "trae-cn" => Ok(Self::TraeCn),
+            "trae-solo-cn" => Ok(Self::TraeSoloCn),
             "qoder" => Ok(Self::Qoder),
             "codebuddy" => Ok(Self::CodeBuddy),
             _ => Err(format!("Unknown app type: {}", s)),

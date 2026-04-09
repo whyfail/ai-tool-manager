@@ -231,6 +231,9 @@ fn get_config_path_for_app(app: &AppType) -> Result<String, AppError> {
         AppType::TraeCn => {
             if cfg!(windows) { "%APPDATA%\\Trae CN\\User\\mcp.json" } else { "~/Library/Application Support/Trae CN/User/mcp.json" }
         },
+        AppType::TraeSoloCn => {
+            if cfg!(windows) { "%APPDATA%\\TRAE SOLO CN\\User\\mcp.json" } else { "~/Library/Application Support/TRAE SOLO CN/User/mcp.json" }
+        },
         AppType::Qoder => {
             if cfg!(windows) { "%USERPROFILE%\\.qoder\\settings.json" } else { "~/.qoder/settings.json" }
         },

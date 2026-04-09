@@ -25,6 +25,7 @@ const agentColors: Record<string, string> = {
   openclaw: "bg-pink-500",
   trae: "bg-indigo-500",
   "trae-cn": "bg-violet-500",
+  "trae-solo-cn": "bg-fuchsia-500",
   qoder: "bg-yellow-500",
   codebuddy: "bg-red-500",
 };

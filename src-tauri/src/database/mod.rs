@@ -68,6 +68,7 @@ impl Database {
                 enabled_openclaw BOOLEAN DEFAULT FALSE,
                 enabled_trae BOOLEAN DEFAULT FALSE,
                 enabled_trae_cn BOOLEAN DEFAULT FALSE,
+                enabled_trae_solo_cn BOOLEAN DEFAULT FALSE,
                 enabled_qoder BOOLEAN DEFAULT FALSE,
                 enabled_codebuddy BOOLEAN DEFAULT FALSE,
                 created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
@@ -89,6 +90,7 @@ impl Database {
         // 尝试添加新列（忽略已存在的错误）
         let _ = conn.execute("ALTER TABLE mcp_servers ADD COLUMN enabled_trae BOOLEAN DEFAULT FALSE", []);
         let _ = conn.execute("ALTER TABLE mcp_servers ADD COLUMN enabled_trae_cn BOOLEAN DEFAULT FALSE", []);
+        let _ = conn.execute("ALTER TABLE mcp_servers ADD COLUMN enabled_trae_solo_cn BOOLEAN DEFAULT FALSE", []);
         let _ = conn.execute("ALTER TABLE mcp_servers ADD COLUMN enabled_qoder BOOLEAN DEFAULT FALSE", []);
         let _ = conn.execute("ALTER TABLE mcp_servers ADD COLUMN enabled_codebuddy BOOLEAN DEFAULT FALSE", []);
 

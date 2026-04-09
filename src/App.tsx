@@ -149,6 +149,7 @@ const SettingsTab: React.FC = () => {
     { name: "OpenClaw", path: "~/.openclaw/openclaw.json" },
     { name: "Trae", path: "~/Library/Application Support/Trae/User/mcp.json" },
     { name: "Trae CN", path: "~/Library/Application Support/Trae CN/User/mcp.json" },
+    { name: "TRAE SOLO CN", path: "~/Library/Application Support/TRAE SOLO CN/User/mcp.json" },
     { name: "Qoder", path: "~/.qoder/settings.json" },
     { name: "CodeBuddy", path: "~/.codebuddy/mcp.json" },
   ];
