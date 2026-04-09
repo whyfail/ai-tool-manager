@@ -102,8 +102,6 @@ jobs:
 
           APP_PATH=$(find "$BUNDLE_DIR" -name "*.app" -type d 2>/dev/null | head -1 || true)
           DMG_PATH=$(find "$BUNDLE_DIR" -name "*.dmg" -type f 2>/dev/null | head -1 || true)
-          # Tauri updater artifacts: latest.json and signature file
-          LATEST_JSON=$(find "$BUNDLE_DIR" -name "latest.json" -type f 2>/dev/null | head -1 || true)
           SIG_FILE=$(find "$BUNDLE_DIR" -name "*.dmg.sig" -type f 2>/dev/null | head -1 || true)
 
           if [ -z "$APP_PATH" ] && [ -z "$DMG_PATH" ]; then
@@ -116,12 +114,6 @@ jobs:
             NEW_DMG="MCP_Manager-${VERSION}-macOS-${ARCH}.dmg"
             cp "$DMG_PATH" "release-assets/$NEW_DMG"
             echo "✅ macOS dmg ready: $NEW_DMG"
-          fi
-
-          # Copy latest.json if available
-          if [ -n "$LATEST_JSON" ]; then
-            cp "$LATEST_JSON" "release-assets/latest.json"
-            echo "✅ latest.json ready"
           fi
 
           # Copy signature file if available
@@ -257,6 +249,64 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate latest.json
+        shell: bash
+        env:
+          VERSION: ${{ steps.get_version_release.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+
+          # Get release date
+          RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Get file sizes
+          DMG_FILE=$(find release-assets -name "*.dmg" -type f | head -1)
+          MSI_FILE=$(find release-assets -name "*.msi" -type f | head -1)
+          DMG_SIG=$(find release-assets -name "*.dmg.sig" -type f | head -1)
+          MSI_SIG=$(find release-assets -name "*.msi.sig" -type f | head -1)
+
+          DMG_SIZE=0
+          MSI_SIZE=0
+          DMG_SIG_CONTENT=""
+          MSI_SIG_CONTENT=""
+
+          if [ -n "$DMG_FILE" ]; then
+            DMG_SIZE=$(stat -f%z "$DMG_FILE" 2>/dev/null || stat -c%s "$DMG_FILE" 2>/dev/null || echo 0)
+          fi
+          if [ -n "$MSI_FILE" ]; then
+            MSI_SIZE=$(stat -f%z "$MSI_FILE" 2>/dev/null || stat -c%s "$MSI_FILE" 2>/dev/null || echo 0)
+          fi
+          if [ -n "$DMG_SIG" ]; then
+            DMG_SIG_CONTENT=$(cat "$DMG_SIG")
+          fi
+          if [ -n "$MSI_SIG" ]; then
+            MSI_SIG_CONTENT=$(cat "$MSI_SIG")
+          fi
+
+          DOWNLOAD_BASE="https://github.com/whyfail/mcp-manager/releases/download/v${VERSION}"
+
+          # Build latest.json
+          cat > release-assets/latest.json <<LATEST_EOF
+{
+  "version": "${VERSION}",
+  "notes": "See changelog at https://github.com/whyfail/mcp-manager/releases/tag/v${VERSION}",
+  "pub_date": "${RELEASE_DATE}",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "${DMG_SIG_CONTENT}",
+      "url": "${DOWNLOAD_BASE}/MCP_Manager-${VERSION}-macOS-aarch64.dmg"
+    },
+    "windows-x86_64": {
+      "signature": "${MSI_SIG_CONTENT}",
+      "url": "${DOWNLOAD_BASE}/MCP_Manager-${VERSION}-Windows-x64.msi"
+    }
+  }
+}
+LATEST_EOF
+
+          echo "✅ latest.json generated:"
+          cat release-assets/latest.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
