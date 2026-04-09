@@ -92,16 +92,19 @@ jobs:
 
           # Recursively search for artifacts
           BUNDLE_DIR=$(find src-tauri/target -name "bundle" -type d | head -1 || true)
-          
+
           if [ -z "$BUNDLE_DIR" ]; then
             echo "❌ No bundle directory found" >&2
             exit 1
           fi
 
           echo "📦 Found bundle dir: $BUNDLE_DIR"
-          
+
           APP_PATH=$(find "$BUNDLE_DIR" -name "*.app" -type d 2>/dev/null | head -1 || true)
           DMG_PATH=$(find "$BUNDLE_DIR" -name "*.dmg" -type f 2>/dev/null | head -1 || true)
+          # Tauri updater artifacts: latest.json and signature file
+          LATEST_JSON=$(find "$BUNDLE_DIR" -name "latest.json" -type f 2>/dev/null | head -1 || true)
+          SIG_FILE=$(find "$BUNDLE_DIR" -name "*.dmg.sig" -type f 2>/dev/null | head -1 || true)
 
           if [ -z "$APP_PATH" ] && [ -z "$DMG_PATH" ]; then
             echo "❌ No macOS artifacts found in $BUNDLE_DIR" >&2
@@ -113,6 +116,18 @@ jobs:
             NEW_DMG="MCP_Manager-${VERSION}-macOS-${ARCH}.dmg"
             cp "$DMG_PATH" "release-assets/$NEW_DMG"
             echo "✅ macOS dmg ready: $NEW_DMG"
+          fi
+
+          # Copy latest.json if available
+          if [ -n "$LATEST_JSON" ]; then
+            cp "$LATEST_JSON" "release-assets/latest.json"
+            echo "✅ latest.json ready"
+          fi
+
+          # Copy signature file if available
+          if [ -n "$SIG_FILE" ]; then
+            cp "$SIG_FILE" "release-assets/$(basename "$SIG_FILE")"
+            echo "✅ signature file ready"
           fi
 
       - name: Upload release artifacts to workflow
@@ -185,6 +200,19 @@ jobs:
           } else {
             Write-Warning 'No Windows MSI installer found'
           }
+
+          # Tauri updater artifacts: latest.json and signature file
+          $bundleDir = Get-ChildItem -Path 'src-tauri/target' -Name 'bundle' -Recurse -Directory | Select-Object -First 1
+          if ($bundleDir) {
+            $fullBundleDir = Join-Path 'src-tauri/target' $bundleDir
+            $sigFile = Get-ChildItem -Path $fullBundleDir -Name '*.msi.sig' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($sigFile) {
+              Copy-Item (Join-Path $fullBundleDir $sigFile) (Join-Path release-assets (Split-Path $sigFile -Leaf))
+              Write-Host "Windows signature file ready"
+            }
+          }
+
+          # Note: latest.json will be handled by macOS job to avoid conflicts
 
       - name: Upload release artifacts to workflow
         uses: actions/upload-artifact@v4
