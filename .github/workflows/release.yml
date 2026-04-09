@@ -58,6 +58,9 @@ jobs:
       - name: Build Tauri App (macOS)
         shell: bash
         timeout-minutes: 60
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           max_attempts=3
