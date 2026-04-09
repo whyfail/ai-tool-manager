@@ -286,24 +286,30 @@ jobs:
 
           DOWNLOAD_BASE="https://github.com/whyfail/mcp-manager/releases/download/v${VERSION}"
 
-          # Build latest.json
-          cat > release-assets/latest.json <<LATEST_EOF
-{
-  "version": "${VERSION}",
-  "notes": "See changelog at https://github.com/whyfail/mcp-manager/releases/tag/v${VERSION}",
-  "pub_date": "${RELEASE_DATE}",
-  "platforms": {
-    "darwin-aarch64": {
-      "signature": "${DMG_SIG_CONTENT}",
-      "url": "${DOWNLOAD_BASE}/MCP_Manager-${VERSION}-macOS-aarch64.dmg"
-    },
-    "windows-x86_64": {
-      "signature": "${MSI_SIG_CONTENT}",
-      "url": "${DOWNLOAD_BASE}/MCP_Manager-${VERSION}-Windows-x64.msi"
-    }
-  }
-}
-LATEST_EOF
+          # Build latest.json using jq to avoid YAML/shell conflicts
+          jq -n \
+            --arg ver "${VERSION}" \
+            --arg date "${RELEASE_DATE}" \
+            --arg dmg_sig "${DMG_SIG_CONTENT}" \
+            --arg msi_sig "${MSI_SIG_CONTENT}" \
+            --arg dmg_url "${DOWNLOAD_BASE}/MCP_Manager-${VERSION}-macOS-aarch64.dmg" \
+            --arg msi_url "${DOWNLOAD_BASE}/MCP_Manager-${VERSION}-Windows-x64.msi" \
+            --arg notes "See changelog at https://github.com/whyfail/mcp-manager/releases/tag/v${VERSION}" \
+            '{
+              version: $ver,
+              notes: $notes,
+              pub_date: $date,
+              platforms: {
+                "darwin-aarch64": {
+                  signature: $dmg_sig,
+                  url: $dmg_url
+                },
+                "windows-x86_64": {
+                  signature: $msi_sig,
+                  url: $msi_url
+                }
+              }
+            }' > release-assets/latest.json
 
           echo "✅ latest.json generated:"
           cat release-assets/latest.json
