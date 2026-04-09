@@ -110,6 +110,7 @@ Database (SQLite) + Config File Sync
 **特殊格式处理**:
 - **Codex**: 独立 `sync_codex_config()` 生成 TOML 格式
 - **OpenCode**: 使用 `build_opencode_mcp_json()` 生成严格 schema 格式（`type` 必填、`command` 为 `string[]`、环境变量用 `environment`）
+- **OpenClaw**: 使用 `sync_openclaw_config()` 生成嵌套结构（`models.providers`）
 - **其他工具**: 通用 `build_mcp_json()` 生成 `command`/`args`/`env` 格式
 
 ### 配置导入机制 (import/mod.rs)
@@ -166,8 +167,8 @@ Database (SQLite) + Config File Sync
 
 添加新工具支持时需要注意:
 1. **OpenCode** 的 MCP 配置有严格 schema (`additionalProperties: false`)，必须使用专用的 `build_opencode_mcp_json()` 生成
-2. **Codex** 使用 TOML 格式，需要独立的 `sync_codex_config()` 处理
-3. **OpenClaw** 的 MCP 配置嵌套在 `models.providers` 下，结构特殊
+2. **OpenClaw** 的 MCP 配置嵌套在 `models.providers` 下，结构特殊
+3. **Codex** 使用 TOML 格式，需要独立的 `sync_codex_config()` 处理
 4. **Gemini CLI** 的 `mcpServers` 可能是数组格式
 
 ### 路径处理
