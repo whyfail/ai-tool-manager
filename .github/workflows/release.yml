@@ -196,7 +196,23 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           $ErrorActionPreference = 'Stop'
-          pnpm tauri build --bundles msi
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "=== Windows build attempt ${attempt}/${maxAttempts} ==="
+            if (pnpm tauri build --bundles msi) {
+              Write-Host "✅ Windows build succeeded"
+              exit 0
+            }
+            
+            if ($attempt -eq $maxAttempts) {
+              Write-Host "❌ Windows build failed after ${maxAttempts} attempts" -ForegroundColor Red
+              exit 1
+            }
+            
+            $sleepSeconds = $attempt * 60
+            Write-Host "⚠️ Windows build failed, retrying in ${sleepSeconds}s..." -ForegroundColor Yellow
+            Start-Sleep -Seconds $sleepSeconds
+          }
 
       - name: Prepare Windows Assets
         shell: pwsh
