@@ -199,7 +199,7 @@ jobs:
           $maxAttempts = 3
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             Write-Host "=== Windows build attempt ${attempt}/${maxAttempts} ==="
-            if (pnpm tauri build --bundles msi) {
+            if (pnpm tauri build --bundles msi,updater) {
               Write-Host "✅ Windows build succeeded"
               exit 0
             }
