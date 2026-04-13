@@ -1,4 +1,4 @@
-# MCP Manager
+# AI 工具箱
 
 <div align="center">
 
@@ -12,7 +12,7 @@
 
 ## 📖 简介
 
-MCP Manager 是一款**通用的 Model Context Protocol (MCP) 服务器管理工具**，旨在帮助开发者统一管理多个 AI 编程工具的 MCP 配置。告别繁琐的手动编辑，一个应用即可管理所有 AI CLI 工具的插件服务。
+AI 工具箱 是一款**通用的 Model Context Protocol (MCP) 服务器管理工具**，旨在帮助开发者统一管理多个 AI 编程工具的 MCP 配置。告别繁琐的手动编辑，一个应用即可管理所有 AI CLI 工具的插件服务。
 
 ## ✨ 核心特性
 
@@ -62,7 +62,7 @@ MCP Manager 是一款**通用的 Model Context Protocol (MCP) 服务器管理工
 
 ### macOS 安装
 
-从 [Releases](https://github.com/whyfail/mcp-manager/releases) 页面下载最新的 `MCP Manager_x.x.x_aarch64.dmg` 安装包：
+从 [Releases](https://github.com/whyfail/mcp-manager/releases) 页面下载最新的 `AI 工具箱_x.x.x_aarch64.dmg` 安装包：
 
 ```bash
 # 挂载 DMG
@@ -80,12 +80,12 @@ cp -R /Volumes/MCP\ Manager/MCP\ Manager.app /Applications/
 1. 将应用拖入 `/Applications` 文件夹
 2. 打开 **终端 (Terminal)**，执行以下命令：
    ```bash
-   sudo xattr -cr "/Applications/MCP Manager.app"
+   sudo xattr -cr "/Applications/AI 工具箱.app"
    ```
 3. 输入开机密码并回车（密码输入时不显示），提示成功后即可双击打开
 
 **方法二（右键打开）：**
-1. 在 `访达 (Finder)` 中找到 `MCP Manager.app`
+1. 在 `访达 (Finder)` 中找到 `AI 工具箱.app`
 2. **右键点击**（或按住 `Control` 键点击）应用图标
 3. 在弹出的菜单中选择 **"打开"**
 4. 在弹出的系统警告框中，再次点击 **"打开"** 即可
@@ -93,12 +93,12 @@ cp -R /Volumes/MCP\ Manager/MCP\ Manager.app /Applications/
 **方法三（系统设置放行）：**
 1. 打开 **“系统设置”** -> **“隐私与安全性”**
 2. 向下滚动到 **“安全性”** 区域
-3. 找到提示 `“MCP Manager” 已被阻止使用...`
+3. 找到提示 `“AI 工具箱” 已被阻止使用...`
 4. 点击 **“仍要打开”**，输入密码确认即可
 
 ### 首次使用
 
-1. 启动 MCP Manager
+1. 启动 AI 工具箱
 2. 应用会自动扫描已安装的 AI 工具
 3. 点击"添加服务器"粘贴 JSON 配置
 4. 点击"测试连接"验证配置

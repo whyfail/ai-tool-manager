@@ -1,16 +1,19 @@
 pub mod agents;
 pub mod app_state;
 pub mod commands;
+pub mod core;
 pub mod database;
 pub mod error;
 pub mod import;
 pub mod mcp;
 pub mod services;
+pub mod skill_core;
 
 use agents::{detect_all_agents, get_last_detected_agents, save_detected_agents};
 use app_state::AppState;
 use database::Database;
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, Manager, async_runtime::spawn};
+use std::time::Duration;
 
 pub fn run() {
     tauri::Builder::default()
@@ -32,27 +35,33 @@ pub fn run() {
                 let _ = state.db.save_mcp_server(&server);
             }
 
-            // 检测新安装的 Agent 工具
-            let previous = get_last_detected_agents();
-            let all_agents = detect_all_agents();
-            let current_names: Vec<String> = all_agents
-                .iter()
-                .filter(|a| a.exists)
-                .map(|a| a.app_type.name().to_string())
-                .collect();
-            let new_agents: Vec<_> = all_agents
-                .iter()
-                .filter(|a| a.exists && !previous.contains(&a.app_type.name().to_string()))
-                .cloned()
-                .collect();
+            // 在后台异步检测新安装的 Agent 工具，延迟发送事件确保前端已就绪
+            let app_handle = app.app_handle().clone();
+            spawn(async move {
+                // 等待 1 秒，确保前端 React 应用已挂载并完成事件监听器注册
+                tokio::time::sleep(Duration::from_secs(1)).await;
 
-            // 保存当前检测状态
-            save_detected_agents(&current_names);
+                let previous = get_last_detected_agents();
+                let all_agents = detect_all_agents();
+                let current_names: Vec<String> = all_agents
+                    .iter()
+                    .filter(|a| a.exists)
+                    .map(|a| a.app_type.name().to_string())
+                    .collect();
+                let new_agents: Vec<_> = all_agents
+                    .iter()
+                    .filter(|a| a.exists && !previous.contains(&a.app_type.name().to_string()))
+                    .cloned()
+                    .collect();
 
-            // 如果有新工具，通过事件通知前端
-            if !new_agents.is_empty() {
-                let _ = app.app_handle().emit("agents-detected", &new_agents);
-            }
+                // 保存当前检测状态
+                save_detected_agents(&current_names);
+
+                // 如果有新工具，通过事件通知前端
+                if !new_agents.is_empty() {
+                    let _ = app_handle.emit("agents-detected", &new_agents);
+                }
+            });
 
             Ok(())
         })
@@ -71,6 +80,17 @@ pub fn run() {
             commands::agents::detect_agents,
             commands::agents::sync_agent_mcp,
             commands::agents::open_config_file,
+            // 技能管理命令
+            commands::skills::get_managed_skills,
+            commands::skills::get_tool_status,
+            commands::skills::get_onboarding_plan,
+            commands::skills::install_git,
+            commands::skills::install_local_selection,
+            commands::skills::sync_skill_to_tool,
+            commands::skills::import_existing_skill,
+            commands::skills::delete_managed_skill,
+            commands::skills::update_skill,
+            commands::skills::get_skill_readme,
             // 更新命令
             commands::update::check_update,
             commands::update::install_update,

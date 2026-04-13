@@ -1,4 +1,4 @@
-# MCP Manager
+# AI Toolkit
 
 <div align="center">
 
@@ -12,7 +12,7 @@
 
 ## 📖 Introduction
 
-MCP Manager is a **universal Model Context Protocol (MCP) server management tool** designed to help developers uniformly manage MCP configurations across multiple AI programming tools. Say goodbye to tedious manual editing—one app to rule them all.
+AI Toolkit is a **universal Model Context Protocol (MCP) server management tool** designed to help developers uniformly manage MCP configurations across multiple AI programming tools. Say goodbye to tedious manual editing—one app to rule them all.
 
 ## ✨ Key Features
 
@@ -62,7 +62,7 @@ MCP Manager is a **universal Model Context Protocol (MCP) server management tool
 
 ### macOS Installation
 
-Download the latest `MCP Manager_x.x.x_aarch64.dmg` installer from the [Releases](https://github.com/whyfail/mcp-manager/releases) page:
+Download the latest `AI Toolkit_x.x.x_aarch64.dmg` installer from the [Releases](https://github.com/whyfail/mcp-manager/releases) page:
 
 ```bash
 # Mount DMG
@@ -80,12 +80,12 @@ Since the current version is not code-signed or notarized by Apple, macOS Gateke
 1. Drag the app to your `/Applications` folder
 2. Open **Terminal** and run the following command:
    ```bash
-   sudo xattr -cr "/Applications/MCP Manager.app"
+   sudo xattr -cr "/Applications/AI Toolkit.app"
    ```
 3. Enter your Mac password and press Enter (characters won't be displayed). Once the command finishes, you can double-click to open.
 
 **Method 2 (Right-Click Open):**
-1. Locate `MCP Manager.app` in `Finder`
+1. Locate `AI Toolkit.app` in `Finder`
 2. **Right-click** (or `Control + Click`) the app icon
 3. Select **"Open"** from the context menu
 4. Click **"Open"** again in the system warning dialog
@@ -93,12 +93,12 @@ Since the current version is not code-signed or notarized by Apple, macOS Gateke
 **Method 3 (System Settings):**
 1. Open **System Settings** -> **Privacy & Security**
 2. Scroll down to the **Security** section
-3. Find the message `"MCP Manager" was blocked from use...`
+3. Find the message `"AI Toolkit" was blocked from use...`
 4. Click **"Open Anyway"** and enter your password if prompted
 
 ### First Use
 
-1. Launch MCP Manager
+1. Launch AI Toolkit
 2. The app will automatically scan installed AI tools
 3. Click "Add Server" to paste JSON configuration
 4. Click "Test Connection" to verify configuration

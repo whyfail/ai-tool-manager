@@ -1,8 +1,8 @@
-# MCP Manager - AGENTS.md
+# AI 工具箱 - AGENTS.md
 
 ## 项目概述
 
-MCP Manager 是一个基于 Tauri 2 的跨平台桌面应用，用于统一管理多个 AI CLI 工具的 MCP (Model Context Protocol) 服务器配置。支持 10 种 AI 工具，提供可视化界面进行 CRUD 操作，并自动同步配置到各工具的配置文件。
+AI 工具箱是一个基于 Tauri 2 的跨平台桌面应用，用于统一管理多个 AI CLI 工具的 MCP (Model Context Protocol) 服务器配置和 Skills。支持 10 种 AI 工具，提供可视化界面进行 CRUD 操作，并自动同步配置和 Skills 到各工具。
 
 ## 技术栈
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import UnifiedMcpPanel from "@/components/mcp/UnifiedMcpPanel";
 import UpdateModal from "@/components/mcp/UpdateModal";
+import SkillsPanel from "@/components/skills/SkillsPanel";
 import {
   Database,
   Settings,
@@ -13,12 +14,13 @@ import {
   Loader2,
   Github,
   ExternalLink,
+  Wrench,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
 import { useAppVersion } from "@/hooks/useAppVersion";
 
-type Tab = "mcp" | "settings" | "about";
+type Tab = "mcp" | "skills" | "settings" | "about";
 type Theme = "light" | "dark" | "system";
 
 function App() {
@@ -53,6 +55,7 @@ function App() {
 
   const navItems = [
     { id: "mcp" as Tab, label: "MCP 服务器", icon: Database },
+    { id: "skills" as Tab, label: "Skills 管理", icon: Wrench },
     { id: "settings" as Tab, label: "设置", icon: Settings },
     { id: "about" as Tab, label: "关于", icon: Info },
   ];
@@ -69,10 +72,10 @@ function App() {
             </div>
             <div>
               <h1 className="text-base font-semibold tracking-tight">
-                MCP Manager
+                AI 工具箱
               </h1>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                通用配置管理
+                AI 编程工具管理
               </p>
             </div>
           </div>
@@ -133,6 +136,7 @@ function App() {
       {/* 主内容区 */}
       <main className="flex-1 overflow-hidden">
         {activeTab === "mcp" && <UnifiedMcpPanel />}
+        {activeTab === "skills" && <SkillsPanel />}
         {activeTab === "settings" && <SettingsTab />}
         {activeTab === "about" && <AboutTab />}
       </main>
@@ -313,7 +317,7 @@ const AboutTab: React.FC = () => {
       <div className="px-8 pt-8 pb-6 border-b border-[hsl(var(--border))]">
         <h2 className="text-2xl font-semibold tracking-tight">关于</h2>
         <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-          了解 MCP Manager 的更多信息
+          了解 AI 工具箱 的更多信息
         </p>
       </div>
 
@@ -324,9 +328,9 @@ const AboutTab: React.FC = () => {
           <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-base font-medium">MCP Manager</h3>
+                <h3 className="text-base font-medium">AI 工具箱</h3>
                 <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
-                  v{appVersion}· 通用 MCP 配置管理工具
+                  v{appVersion}· MCP 和 Skills 管理工具
                 </p>
               </div>
               <button

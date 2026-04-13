@@ -1,0 +1,153 @@
+use std::path::Path;
+use std::process::Command;
+use std::time::Duration;
+
+use anyhow::{Context, Result};
+
+/// Clone or update a git repository.
+/// Returns the HEAD commit hash.
+pub fn clone_or_pull(
+    repo_url: &str,
+    dest: &Path,
+    branch: Option<&str>,
+) -> Result<String> {
+    // Ensure parent exists so `git clone` can create dest.
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create parent dir {:?}", parent))?;
+    }
+
+    if dest.exists() && dest.join(".git").exists() {
+        // Pull updates
+        fetch_and_checkout(dest, branch)
+    } else {
+        // Clone
+        git_clone(repo_url, dest, branch)
+    }
+}
+
+fn git_clone(repo_url: &str, dest: &Path, branch: Option<&str>) -> Result<String> {
+    eprintln!("[DEBUG] Starting git clone: {} -> {:?}", repo_url, dest);
+    let mut cmd = Command::new("git");
+    cmd.arg("clone")
+        .args(["--depth", "1", "--filter=blob:none", "--no-tags"])
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "echo");
+
+    if let Some(b) = branch {
+        cmd.arg("--branch").arg(b).arg("--single-branch");
+    }
+    cmd.arg(repo_url).arg(dest);
+
+    let output = run_command_with_timeout(&mut cmd, Duration::from_secs(300))
+        .with_context(|| format!("git clone {} into {:?}", repo_url, dest))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("[ERROR] git clone failed: {}", stderr);
+        anyhow::bail!("git clone failed: {}", stderr);
+    }
+
+    eprintln!("[DEBUG] git clone succeeded, getting HEAD");
+    // Get HEAD revision
+    get_head_revision(dest)
+}
+
+fn fetch_and_checkout(dest: &Path, branch: Option<&str>) -> Result<String> {
+    eprintln!("[DEBUG] Starting git fetch in {:?}", dest);
+    // Fetch updates
+    let output = run_command_with_timeout(
+        Command::new("git")
+            .arg("-C")
+            .arg(dest)
+            .args(["fetch", "--prune", "origin"])
+            .env("GIT_TERMINAL_PROMPT", "0"),
+        Duration::from_secs(180),
+    ).with_context(|| format!("git fetch in {:?}", dest))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("[ERROR] git fetch failed: {}", stderr);
+        anyhow::bail!("git fetch failed: {}", stderr);
+    }
+
+    // Checkout branch if specified
+    if let Some(b) = branch {
+        let output = run_command_with_timeout(
+            &mut Command::new("git")
+                .arg("-C")
+                .arg(dest)
+                .args(["checkout", "-B", b, &format!("origin/{}", b)])
+                .env("GIT_TERMINAL_PROMPT", "0"),
+            Duration::from_secs(60),
+        ).with_context(|| format!("git checkout {} in {:?}", b, dest))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            eprintln!("[ERROR] git checkout failed: {}", stderr);
+            anyhow::bail!("git checkout branch failed: {}", stderr);
+        }
+    } else {
+        // Reset to FETCH_HEAD
+        let output = run_command_with_timeout(
+            &mut Command::new("git")
+                .arg("-C")
+                .arg(dest)
+                .args(["reset", "--hard", "FETCH_HEAD"])
+                .env("GIT_TERMINAL_PROMPT", "0"),
+            Duration::from_secs(60),
+        ).with_context(|| format!("git reset --hard in {:?}", dest))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            eprintln!("[ERROR] git reset failed: {}", stderr);
+            anyhow::bail!("git reset --hard failed: {}", stderr);
+        }
+    }
+
+    get_head_revision(dest)
+}
+
+fn get_head_revision(dest: &Path) -> Result<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(dest)
+        .arg("rev-parse")
+        .arg("HEAD")
+        .output()
+        .with_context(|| format!("git rev-parse HEAD in {:?}", dest))?;
+
+    if !output.status.success() {
+        anyhow::bail!("git rev-parse failed");
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn run_command_with_timeout(cmd: &mut Command, timeout: Duration) -> Result<std::process::Output> {
+    let started = std::time::Instant::now();
+    let mut child = cmd.spawn()
+        .with_context(|| format!("spawn command: {:?}", cmd))?;
+
+    loop {
+        if started.elapsed() > timeout {
+            eprintln!("[WARN] Command timed out after {:?}", timeout);
+            let _ = child.kill();
+            let _ = child.wait();
+            anyhow::bail!("Command timed out after {:?}", timeout);
+        }
+
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                return child.wait_with_output()
+                    .with_context(|| "wait for output");
+            }
+            Ok(None) => {
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            Err(e) => {
+                anyhow::bail!("try_wait failed: {}", e);
+            }
+        }
+    }
+}

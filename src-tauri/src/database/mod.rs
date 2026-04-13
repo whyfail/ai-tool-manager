@@ -48,7 +48,7 @@ impl Database {
 
     fn init_schema(&self) -> Result<(), AppError> {
         let conn = self.conn.lock();
-        
+
         // 创建表
         conn.execute_batch(
             "
@@ -82,6 +82,29 @@ impl Database {
                 mcp_config TEXT,
                 last_import_at INTEGER,
                 UNIQUE(app_name)
+            );
+
+            CREATE TABLE IF NOT EXISTS managed_skills (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                source_type TEXT NOT NULL,
+                source_ref TEXT,
+                central_path TEXT NOT NULL,
+                created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+                updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+                last_sync_at INTEGER
+            );
+
+            CREATE TABLE IF NOT EXISTS skill_sync_targets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                skill_id TEXT NOT NULL,
+                tool_id TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                status TEXT NOT NULL,
+                target_path TEXT NOT NULL,
+                synced_at INTEGER,
+                FOREIGN KEY(skill_id) REFERENCES managed_skills(id) ON DELETE CASCADE
             );
             ",
         )
