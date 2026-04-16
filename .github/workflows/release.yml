@@ -240,9 +240,9 @@ jobs:
 
           # Tauri updater artifacts: latest.json and signature file
           # Tauri v2 generates .msi.zip for Windows
-          $bundleDir = Get-ChildItem -Path 'src-tauri/target' -Name 'bundle' -Recurse -Directory | Select-Object -First 1
+          $bundleDir = (Get-ChildItem -Path 'src-tauri/target' -Recurse -Directory -Filter 'bundle' | Select-Object -First 1).FullName
           if ($bundleDir) {
-            $fullBundleDir = Join-Path 'src-tauri/target' $bundleDir
+            $fullBundleDir = $bundleDir
             Write-Host "Bundle directory: $fullBundleDir"
             
             # Debug: List all files in bundle directory
