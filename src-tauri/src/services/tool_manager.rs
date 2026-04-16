@@ -160,8 +160,58 @@ fn which_binary(binary: &str) -> Option<String> {
 
 #[cfg(not(windows))]
 fn which_binary(binary: &str) -> Option<String> {
+    // First try system which
     let output = std::process::Command::new("sh")
         .args(["-c", &format!("which {}", binary)])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !path.is_empty() {
+            return Some(path);
+        }
+    }
+
+    // If system which failed, check common installation paths directly
+    // This is needed because GUI apps don't inherit user's shell PATH
+    let home = std::env::var("HOME").ok()?;
+    let common_paths = [
+        // homebrew
+        format!("{}/.brew/bin/{}", home, binary),
+        format!("/opt/homebrew/bin/{}", binary),
+        format!("/usr/local/bin/{}", binary),
+        // nvm
+        format!("{}/.nvm/versions/node/default/bin/{}", home, binary),
+        // fnm
+        format!("{}/.fnm/versions/node-default/bin/{}", home, binary),
+        // volta
+        format!("{}/.volta/bin/{}", home, binary),
+        // nvmd
+        format!("{}/.nvmd/bin/{}", home, binary),
+        // npm global (via npm config get prefix)
+    ];
+
+    for path in &common_paths {
+        if std::path::Path::new(path).exists() {
+            return Some(path.clone());
+        }
+    }
+
+    // Try to find npm global bin path
+    if let Some(npm_prefix) = get_npm_global_prefix() {
+        let npm_path = format!("{}/bin/{}", npm_prefix, binary);
+        if std::path::Path::new(&npm_path).exists() {
+            return Some(npm_path);
+        }
+    }
+
+    None
+}
+
+#[cfg(not(windows))]
+fn get_npm_global_prefix() -> Option<String> {
+    let output = std::process::Command::new("sh")
+        .args(["-c", "npm config get prefix 2>/dev/null"])
         .output()
         .ok()?;
     if output.status.success() {
