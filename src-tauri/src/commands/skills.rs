@@ -728,6 +728,103 @@ pub async fn update_skill(
 }
 
 #[tauri::command]
+pub async fn rename_skill(
+    state: State<'_, AppState>,
+    skill_id: String,
+    new_name: String,
+    new_source_ref: Option<String>,
+) -> Result<(), String> {
+    eprintln!("[DEBUG] rename_skill called: skill_id={}, new_name={}, new_source_ref={:?}", skill_id, new_name, new_source_ref);
+
+    // 获取原有技能信息
+    let skill_record = state.db.get_skill_by_id(&skill_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Skill not found: {}", skill_id))?;
+
+    let old_name = skill_record.name.clone();
+    let _old_central_path = skill_record.central_path.clone();
+
+    // 解析 central repo 路径
+    let central_dir = resolve_central_repo_path().map_err(|e| e.to_string())?;
+    let old_path = central_dir.join(&old_name);
+    let new_path = central_dir.join(&new_name);
+
+    // 检查新路径是否已存在
+    let name_changed = old_name != new_name;
+    if new_path.exists() && name_changed {
+        return Err(format!("目标路径已存在: {:?}", new_path));
+    }
+
+    // 在阻塞线程中执行文件系统操作（克隆需要的值）
+    let old_name_for_blocking = old_name.clone();
+    let new_name_for_blocking = new_name.clone();
+    let old_path_clone = old_path.clone();
+    let new_path_clone = new_path.clone();
+    tokio::task::spawn_blocking(move || -> Result<(), String> {
+        let old_path_for_blocking = old_path_clone;
+        let new_path_for_blocking = new_path_clone;
+
+        // 1. 重命名 central repo 中的文件夹
+        if old_path_for_blocking.exists() {
+            if old_name_for_blocking == new_name_for_blocking {
+                // 名称没变，只更新 source_ref
+            } else {
+                std::fs::rename(&old_path_for_blocking, &new_path_for_blocking)
+                    .map_err(|e| format!("重命名 central 技能文件夹失败: {}", e))?;
+            }
+        }
+
+        // 2. 重命名所有已同步工具中的文件夹
+        let all_tools = default_tool_adapters();
+        for tool in &all_tools {
+            let installed = is_tool_installed(tool).map_err(|e| e.to_string())?;
+            if !installed {
+                continue;
+            }
+
+            let skills_dir = resolve_default_path(tool).map_err(|e| e.to_string())?;
+            let old_tool_skill_path = skills_dir.join(&old_name_for_blocking);
+            let new_tool_skill_path = skills_dir.join(&new_name_for_blocking);
+
+            if old_tool_skill_path.exists() {
+                if old_name_for_blocking == new_name_for_blocking {
+                    // 名称没变，不需要重命名工具目录
+                } else {
+                    // 先删除目标（如果存在）
+                    if new_tool_skill_path.exists() {
+                        if new_tool_skill_path.is_symlink() {
+                            std::fs::remove_file(&new_tool_skill_path)
+                                .map_err(|e| format!("删除目标符号链接失败: {}", e))?;
+                        } else {
+                            std::fs::remove_dir_all(&new_tool_skill_path)
+                                .map_err(|e| format!("删除目标目录失败: {}", e))?;
+                        }
+                    }
+                    std::fs::rename(&old_tool_skill_path, &new_tool_skill_path)
+                        .map_err(|e| format!("重命名工具技能文件夹失败: {}", e))?;
+                }
+            }
+        }
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    // 3. 更新数据库
+    let new_central_path = new_path.to_string_lossy().to_string();
+    state.db.update_skill_metadata(
+        &skill_id,
+        &new_name,
+        new_source_ref.as_deref(),
+        &new_central_path,
+    ).map_err(|e| e.to_string())?;
+
+    eprintln!("[DEBUG] rename_skill completed successfully");
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn get_skill_readme(skill_name: String) -> Result<String, String> {
     let central_dir = resolve_central_repo_path().map_err(|e| e.to_string())?;
     let skill_path = central_dir.join(&skill_name).join("SKILL.md");

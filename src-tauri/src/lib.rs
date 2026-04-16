@@ -95,6 +95,7 @@ pub fn run() {
             commands::skills::import_existing_skill,
             commands::skills::delete_managed_skill,
             commands::skills::update_skill,
+            commands::skills::rename_skill,
             commands::skills::get_skill_readme,
             commands::skills::search_skills_online,
             commands::skills::get_featured_skills,

@@ -133,4 +133,25 @@ impl Database {
         .map_err(|e| AppError::Database(e.to_string()))?;
         Ok(())
     }
+
+    /// 更新技能元数据（name, source_ref）
+    pub fn update_skill_metadata(
+        &self,
+        id: &str,
+        name: &str,
+        source_ref: Option<&str>,
+        central_path: &str,
+    ) -> Result<(), AppError> {
+        let conn = self.conn.lock();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+        conn.execute(
+            "UPDATE managed_skills SET name = ?1, source_ref = ?2, central_path = ?3, updated_at = ?4 WHERE id = ?5",
+            params![name, source_ref, central_path, now, id],
+        )
+        .map_err(|e| AppError::Database(e.to_string()))?;
+        Ok(())
+    }
 }

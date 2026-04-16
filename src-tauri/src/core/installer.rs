@@ -177,8 +177,12 @@ pub fn install_git_skill(
     ensure_central_repo(&central_dir)?;
     let mut central_path = central_dir.join(&skill_name);
 
+    // 先删除已存在的目录（处理 APFS 删除延迟问题），不再先检查
     if central_path.exists() {
-        anyhow::bail!("Skill already exists in central repo: {:?}", central_path);
+        std::fs::remove_dir_all(&central_path)
+            .context(format!("failed to remove existing skill: {:?}", central_path))?;
+        // 等待 APFS 完成删除操作
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
     // Fast path: for GitHub URLs with a subpath, download via API instead of cloning.
@@ -322,8 +326,11 @@ pub fn install_git_skill_from_selection(
     ensure_central_repo(&central_dir)?;
     let mut central_path = central_dir.join(&display_name);
 
+    // 先删除已存在的目录（处理 APFS 删除延迟问题），不再先检查
     if central_path.exists() {
-        anyhow::bail!("Skill already exists in central repo: {:?}", central_path);
+        std::fs::remove_dir_all(&central_path)
+            .context(format!("failed to remove existing skill: {:?}", central_path))?;
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
     let (repo_dir, revision) = clone_to_cache_with_ttl(&parsed.clone_url, parsed.branch.as_deref())?;

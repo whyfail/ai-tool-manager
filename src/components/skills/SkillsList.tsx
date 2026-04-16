@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { GitBranch, Folder, Trash2, Sparkles, X, FileText, CheckSquare, Square, Github, RefreshCw } from 'lucide-react';
+import { GitBranch, Folder, Trash2, Sparkles, X, FileText, CheckSquare, Square, Github, RefreshCw, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ManagedSkill, ToolOption } from './types';
 
@@ -29,6 +29,7 @@ interface SkillsListProps {
   onSelectAll: (selected: boolean) => void;
   searchQuery: string;
   onDeleteSkill: (skill: ManagedSkill) => void;
+  onEditSkill: (skill: ManagedSkill) => void;
   onDeleteId: string | null;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
@@ -43,6 +44,7 @@ function SkillsList({
   onSelectAll,
   searchQuery,
   onDeleteSkill,
+  onEditSkill,
   onDeleteId,
   onConfirmDelete,
   onCancelDelete,
@@ -250,6 +252,13 @@ function SkillsList({
                       <RefreshCw size={14} className={`text-[hsl(var(--muted-foreground))] ${refreshingSkill === skill.id ? 'animate-spin' : ''}`} />
                     </button>
                   )}
+                  <button
+                    onClick={() => onEditSkill(skill)}
+                    className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                    title="编辑技能"
+                  >
+                    <Pencil size={14} className="text-[hsl(var(--muted-foreground))]" />
+                  </button>
                   <button
                     onClick={() => onDeleteSkill(skill)}
                     className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"

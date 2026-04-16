@@ -6,6 +6,7 @@ import SkillsList from './SkillsList';
 import AddSkillModal from './modals/AddSkillModal';
 import ImportModal from './modals/ImportModal';
 import BatchSyncModal from './modals/BatchSyncModal';
+import EditSkillModal from './modals/EditSkillModal';
 import type {
   ManagedSkill,
   ToolStatusDto,
@@ -23,6 +24,7 @@ function SkillsPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [syncTargets, setSyncTargets] = useState<Record<string, boolean>>({});
   const [deleteSkillId, setDeleteSkillId] = useState<string | null>(null);
+  const [editingSkill, setEditingSkill] = useState<ManagedSkill | null>(null);
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
@@ -131,6 +133,10 @@ function SkillsPanel() {
     setDeleteSkillId(skill.id);
   }, []);
 
+  const handleEditSkill = useCallback((skill: ManagedSkill) => {
+    setEditingSkill(skill);
+  }, []);
+
   const confirmDelete = useCallback(async () => {
     if (!deleteSkillId) return;
     const skill = managedSkills.find(s => s.id === deleteSkillId);
@@ -236,6 +242,7 @@ function SkillsPanel() {
             onSelectAll={handleSelectAll}
             searchQuery={searchQuery}
             onDeleteSkill={handleDeleteSkill}
+            onEditSkill={handleEditSkill}
             onDeleteId={deleteSkillId}
             onConfirmDelete={confirmDelete}
             onCancelDelete={() => setDeleteSkillId(null)}
@@ -269,6 +276,15 @@ function SkillsPanel() {
         tools={tools}
         onSyncComplete={() => {
           setSelectedSkills(new Set());
+          loadManagedSkills();
+        }}
+      />
+      <EditSkillModal
+        open={editingSkill !== null}
+        skill={editingSkill}
+        onClose={() => setEditingSkill(null)}
+        onSkillEdited={() => {
+          setEditingSkill(null);
           loadManagedSkills();
         }}
       />

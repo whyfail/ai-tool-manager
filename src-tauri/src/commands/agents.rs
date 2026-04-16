@@ -466,11 +466,21 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
             "hyper" => {
                 let full_cmd = format!(
                     "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
+                    node_bin_dir.replace("\"", "\\\""),
                     command
                 );
-                let output = Command::new("open")
-                    .args(["-na", "Hyper", "--args", "-e", &full_cmd])
+                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
+                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
+                let output = Command::new("osascript")
+                    .args(["-e", &format!(
+                        "tell application \"Hyper\"\n\
+                         activate\n\
+                         delay 0.5\n\
+                         tell application \"System Events\"\n\
+                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
+                         end tell",
+                        script_path
+                    )])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
@@ -482,11 +492,21 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
             "kitty" => {
                 let full_cmd = format!(
                     "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
+                    node_bin_dir.replace("\"", "\\\""),
                     command
                 );
-                let output = Command::new("open")
-                    .args(["-na", "kitty", "--args", "--hold", "-e", "sh", "-c", &full_cmd])
+                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
+                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
+                let output = Command::new("osascript")
+                    .args(["-e", &format!(
+                        "tell application \"Kitty\"\n\
+                         activate\n\
+                         delay 0.5\n\
+                         tell application \"System Events\"\n\
+                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
+                         end tell",
+                        script_path
+                    )])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
@@ -498,11 +518,21 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
             "alacritty" => {
                 let full_cmd = format!(
                     "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
+                    node_bin_dir.replace("\"", "\\\""),
                     command
                 );
-                let output = Command::new("open")
-                    .args(["-na", "Alacritty", "--args", "-e", "sh", "-c", &full_cmd])
+                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
+                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
+                let output = Command::new("osascript")
+                    .args(["-e", &format!(
+                        "tell application \"Alacritty\"\n\
+                         activate\n\
+                         delay 0.5\n\
+                         tell application \"System Events\"\n\
+                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
+                         end tell",
+                        script_path
+                    )])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
@@ -514,11 +544,21 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
             "fig" => {
                 let full_cmd = format!(
                     "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
+                    node_bin_dir.replace("\"", "\\\""),
                     command
                 );
-                let output = Command::new("open")
-                    .args(["-na", "Fig", "--args", "-e", &full_cmd])
+                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
+                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
+                let output = Command::new("osascript")
+                    .args(["-e", &format!(
+                        "tell application \"Fig\"\n\
+                         activate\n\
+                         delay 0.5\n\
+                         tell application \"System Events\"\n\
+                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
+                         end tell",
+                        script_path
+                    )])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
@@ -528,15 +568,24 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
                 }
             }
             "kaku" => {
-                // Kaku 是基于 WezTerm 的终端，支持 kaku cli 命令
-                // 直接运行 kaku 新打开一个终端窗口执行命令
+                // Kaku 是基于 WezTerm 的终端
                 let full_cmd = format!(
                     "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
+                    node_bin_dir.replace("\"", "\\\""),
                     command
                 );
-                let output = Command::new("kaku")
-                    .args(["-e", "bash", "-c", &full_cmd])
+                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
+                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
+                let output = Command::new("osascript")
+                    .args(["-e", &format!(
+                        "tell application \"Kaku\"\n\
+                         activate\n\
+                         delay 0.5\n\
+                         tell application \"System Events\"\n\
+                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
+                         end tell",
+                        script_path
+                    )])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
