@@ -188,16 +188,13 @@ jobs:
 
       - name: Install WiX
         run: |
-          curl -L -o wix.exe https://github.com/wixtoolset/wix/releases/latest/download/wix.exe
-          start /wait wix.exe /quiet
+          curl -L -o wix.msi https://github.com/wixtoolset/wix/releases/latest/download/wix-cli-x64.msi
+          msiexec /i wix.msi /quiet /qn /norestart
 
       - name: Add WiX to PATH
         run: |
-          echo "C:\Program Files\WiX Toolset v4\bin" >> $env:GITHUB_PATH
+          echo "C:\Program Files\WiX Toolset\bin" >> $env:GITHUB_PATH
 
-      - name: Check WiX
-        run: wix --version
-        
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
