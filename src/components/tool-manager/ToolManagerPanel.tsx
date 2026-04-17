@@ -342,8 +342,9 @@ const ToolManagerPanel: React.FC = () => {
       setInstallingTool(null);
       queryClient.invalidateQueries({ queryKey: ["tool-infos"] });
     },
-    onError: (error: Error) => {
-      toast.error(`安装失败: ${error.message}`);
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`安装失败: ${message}`);
       setInstallingTool(null);
     },
   });
@@ -365,8 +366,9 @@ const ToolManagerPanel: React.FC = () => {
         );
       });
     },
-    onError: (error: Error) => {
-      toast.error(`更新失败: ${error.message}`);
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`更新失败: ${message}`);
       setUpdatingTool(null);
     },
   });
@@ -386,8 +388,9 @@ const ToolManagerPanel: React.FC = () => {
         );
       });
     },
-    onError: (error: Error) => {
-      toast.error(`扫描失败: ${error.message}`);
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(`扫描失败: ${message}`);
       setScanningTool(null);
     },
   });
