@@ -222,6 +222,19 @@ fn get_npm_global_prefix() -> Option<String> {
 }
 
 #[cfg(windows)]
+fn get_npm_global_prefix() -> Option<String> {
+    let output = std::process::Command::new("cmd")
+        .args(["/C", "npm config get prefix"])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        None
+    }
+}
+
+#[cfg(windows)]
 fn npm_list_global(package: &str) -> Option<bool> {
     let output = std::process::Command::new("cmd")
         .args(["/C", &format!("npm list -g {} 2>nul", package)])
@@ -531,23 +544,21 @@ impl ToolManagerService {
                 }
             }
 
+            #[cfg(not(windows))]
             if let InstallMethod::Brew { package } = method {
-                #[cfg(not(windows))]
-                {
-                    let output = tokio::process::Command::new("sh")
-                        .args(["-c", &format!("brew info {} 2>/dev/null | head -1", package)])
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::piped())
-                        .output()
-                        .await
-                        .ok()?;
-                    if output.status.success() {
-                        let output_str = String::from_utf8_lossy(&output.stdout);
-                        if let Some(version) = output_str.split_whitespace().nth(1) {
-                            let version = version.trim_start_matches('[').trim_end_matches(',');
-                            if !version.is_empty() && version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
-                                return Some(version.to_string());
-                            }
+                let output = tokio::process::Command::new("sh")
+                    .args(["-c", &format!("brew info {} 2>/dev/null | head -1", package)])
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .output()
+                    .await
+                    .ok()?;
+                if output.status.success() {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+                    if let Some(version) = output_str.split_whitespace().nth(1) {
+                        let version = version.trim_start_matches('[').trim_end_matches(',');
+                        if !version.is_empty() && version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+                            return Some(version.to_string());
                         }
                     }
                 }
@@ -746,9 +757,40 @@ impl ToolManagerService {
             }
             #[cfg(windows)]
             Some(InstallMethodType::Brew) => unreachable!(),
+            #[cfg(not(windows))]
             Some(InstallMethodType::Winget) | Some(InstallMethodType::Scoop) => {
-                // These should not be detected on non-Windows/Windows respectively, but just in case
-                Err("Platform-specific installation method detected".into())
+                // Winget and Scoop are Windows-only
+                Err("Winget/Scoop 仅在 Windows 上可用".into())
+            }
+            #[cfg(windows)]
+            Some(InstallMethodType::Winget) => {
+                let package = install_info.methods.iter()
+                    .find_map(|m| {
+                        match m {
+                            InstallMethod::Brew { package } => Some(package.clone()),
+                            InstallMethod::Npm { package } => Some(package.clone()),
+                            _ => None,
+                        }
+                    })
+                    .unwrap_or_else(|| app.name().to_lowercase());
+                let mut cmd = std::process::Command::new("winget");
+                cmd.args(["upgrade", "--id", &package, "-e"]);
+                Self::execute_command_windows(&mut cmd).await
+            }
+            #[cfg(windows)]
+            Some(InstallMethodType::Scoop) => {
+                let package = install_info.methods.iter()
+                    .find_map(|m| {
+                        match m {
+                            InstallMethod::Brew { package } => Some(package.clone()),
+                            InstallMethod::Npm { package } => Some(package.clone()),
+                            _ => None,
+                        }
+                    })
+                    .unwrap_or_else(|| app.name().to_lowercase());
+                let mut cmd = std::process::Command::new("scoop");
+                cmd.args(["update", &package]);
+                Self::execute_command_windows(&mut cmd).await
             }
             None => {
                 if !install_info.update_cmd.is_empty() {
