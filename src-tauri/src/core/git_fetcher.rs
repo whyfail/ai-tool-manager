@@ -1,8 +1,9 @@
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use crate::utils::SuppressConsole;
 
 /// Clone or update a git repository.
 /// Returns the HEAD commit hash.
@@ -29,7 +30,10 @@ pub fn clone_or_pull(
 fn git_clone(repo_url: &str, dest: &Path, branch: Option<&str>) -> Result<String> {
     eprintln!("[DEBUG] Starting git clone: {} -> {:?}", repo_url, dest);
     let mut cmd = Command::new("git");
-    cmd.arg("clone")
+    cmd.suppress_console()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .arg("clone")
         .args(["--depth", "1", "--filter=blob:none", "--no-tags"])
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_ASKPASS", "echo");
@@ -58,6 +62,9 @@ fn fetch_and_checkout(dest: &Path, branch: Option<&str>) -> Result<String> {
     // Fetch updates
     let output = run_command_with_timeout(
         Command::new("git")
+            .suppress_console()
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .arg("-C")
             .arg(dest)
             .args(["fetch", "--prune", "origin"])
@@ -75,6 +82,9 @@ fn fetch_and_checkout(dest: &Path, branch: Option<&str>) -> Result<String> {
     if let Some(b) = branch {
         let output = run_command_with_timeout(
             &mut Command::new("git")
+                .suppress_console()
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
                 .arg("-C")
                 .arg(dest)
                 .args(["checkout", "-B", b, &format!("origin/{}", b)])
@@ -91,6 +101,9 @@ fn fetch_and_checkout(dest: &Path, branch: Option<&str>) -> Result<String> {
         // Reset to FETCH_HEAD
         let output = run_command_with_timeout(
             &mut Command::new("git")
+                .suppress_console()
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
                 .arg("-C")
                 .arg(dest)
                 .args(["reset", "--hard", "FETCH_HEAD"])
@@ -110,6 +123,7 @@ fn fetch_and_checkout(dest: &Path, branch: Option<&str>) -> Result<String> {
 
 fn get_head_revision(dest: &Path) -> Result<String> {
     let output = Command::new("git")
+        .suppress_console()
         .arg("-C")
         .arg(dest)
         .arg("rev-parse")
@@ -124,30 +138,12 @@ fn get_head_revision(dest: &Path) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn run_command_with_timeout(cmd: &mut Command, timeout: Duration) -> Result<std::process::Output> {
-    let started = std::time::Instant::now();
-    let mut child = cmd.spawn()
+fn run_command_with_timeout(cmd: &mut Command, _timeout: Duration) -> Result<std::process::Output> {
+    // 使用 cmd.output() 代替 spawn + try_wait 轮询
+    // output() 会同时读取 stdout/stderr 管道，避免缓冲区满导致死锁
+    // 之前的 try_wait 轮询方式从不读取管道，git clone 输出量大时
+    // 管道缓冲区被填满，导致 git 进程阻塞在 write() 上永远无法退出
+    let output = cmd.output()
         .with_context(|| format!("spawn command: {:?}", cmd))?;
-
-    loop {
-        if started.elapsed() > timeout {
-            eprintln!("[WARN] Command timed out after {:?}", timeout);
-            let _ = child.kill();
-            let _ = child.wait();
-            anyhow::bail!("Command timed out after {:?}", timeout);
-        }
-
-        match child.try_wait() {
-            Ok(Some(_status)) => {
-                return child.wait_with_output()
-                    .with_context(|| "wait for output");
-            }
-            Ok(None) => {
-                std::thread::sleep(Duration::from_millis(100));
-            }
-            Err(e) => {
-                anyhow::bail!("try_wait failed: {}", e);
-            }
-        }
-    }
+    Ok(output)
 }

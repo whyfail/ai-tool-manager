@@ -8,6 +8,7 @@ use crate::app_state::AppState;
 use crate::database::McpServer;
 use crate::mcp::AppType;
 use crate::services::McpService;
+use crate::utils::SuppressConsole;
 use std::str::FromStr;
 
 /// 获取所有 MCP 服务器
@@ -74,7 +75,8 @@ pub async fn test_mcp_connection(params: TestConnectionParams) -> Result<TestCon
     tokio::task::spawn_blocking(move || {
         // 继承系统 PATH 环境变量，确保能找到 npx/node 等命令
         let mut cmd = Command::new(&command);
-        cmd.args(&args)
+        cmd.suppress_console()
+            .args(&args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

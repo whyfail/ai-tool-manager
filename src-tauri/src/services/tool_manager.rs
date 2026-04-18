@@ -1,4 +1,5 @@
 use crate::mcp::{AppType, InstallMethod};
+use crate::utils::SuppressConsole;
 use std::io::Write;
 use std::process::Stdio;
 
@@ -70,6 +71,7 @@ fn ensure_npm_path_in_shell_config() -> Result<(), String> {
 
 fn ensure_npm_path_unix() -> Result<(), String> {
     let output = std::process::Command::new("sh")
+        .suppress_console()
         .args(["-c", "npm config get prefix"])
         .output()
         .map_err(|e| format!("获取 npm prefix 失败: {}", e))?;
@@ -100,6 +102,7 @@ fn ensure_npm_path_unix() -> Result<(), String> {
 
 fn ensure_npm_path_windows() -> Result<(), String> {
     let output = std::process::Command::new("cmd")
+        .suppress_console()
         .args(["/C", "npm config get prefix"])
         .output()
         .map_err(|e| format!("获取 npm prefix 失败: {}", e))?;
@@ -148,6 +151,7 @@ fn ensure_npm_path_windows() -> Result<(), String> {
 #[cfg(windows)]
 pub fn which_binary(binary: &str) -> Option<String> {
     let output = std::process::Command::new("where")
+        .suppress_console()
         .arg(binary)
         .output()
         .ok()?;
@@ -162,6 +166,7 @@ pub fn which_binary(binary: &str) -> Option<String> {
 pub fn which_binary(binary: &str) -> Option<String> {
     // First try system which
     let output = std::process::Command::new("sh")
+        .suppress_console()
         .args(["-c", &format!("which {}", binary)])
         .output()
         .ok()?;
@@ -211,6 +216,7 @@ pub fn which_binary(binary: &str) -> Option<String> {
 #[cfg(not(windows))]
 fn get_npm_global_prefix() -> Option<String> {
     let output = std::process::Command::new("sh")
+        .suppress_console()
         .args(["-c", "npm config get prefix 2>/dev/null"])
         .output()
         .ok()?;
@@ -224,6 +230,7 @@ fn get_npm_global_prefix() -> Option<String> {
 #[cfg(windows)]
 fn get_npm_global_prefix() -> Option<String> {
     let output = std::process::Command::new("cmd")
+        .suppress_console()
         .args(["/C", "npm config get prefix"])
         .output()
         .ok()?;
@@ -237,6 +244,7 @@ fn get_npm_global_prefix() -> Option<String> {
 #[cfg(windows)]
 fn npm_list_global(package: &str) -> Option<bool> {
     let output = std::process::Command::new("cmd")
+        .suppress_console()
         .args(["/C", &format!("npm list -g {} 2>nul", package)])
         .output()
         .ok()?;
@@ -247,6 +255,7 @@ fn npm_list_global(package: &str) -> Option<bool> {
 fn npm_list_global(package: &str) -> Option<bool> {
     // Try using npm from PATH first
     let output = std::process::Command::new("sh")
+        .suppress_console()
         .args(["-c", &format!("npm list -g {} 2>/dev/null", package)])
         .output()
         .ok()?;
@@ -341,6 +350,7 @@ impl ToolManagerService {
                     if which_binary("brew").is_some() {
                         // Additional check: see if the binary is managed by Homebrew
                         let output = std::process::Command::new("sh")
+                            .suppress_console()
                             .args(["-c", &format!("brew list {} 2>/dev/null", binary_name)])
                             .output();
                         if let Ok(out) = output {
@@ -470,10 +480,26 @@ impl ToolManagerService {
             return None;
         }
 
+        // 尝试用 which_binary 获取完整路径，解决 GUI 进程 PATH 不完整时找不到命令的问题
+        let binary_name = get_binary_name(app);
+        let resolved_version_cmd = if let Some(full_path) = which_binary(&binary_name) {
+            // 用完整路径替换 version_cmd 中的二进制名（只替换第一个匹配）
+            if let Some(pos) = install_info.version_cmd.find(&binary_name) {
+                let mut cmd = install_info.version_cmd.clone();
+                cmd.replace_range(pos..pos + binary_name.len(), &full_path);
+                cmd
+            } else {
+                install_info.version_cmd.clone()
+            }
+        } else {
+            install_info.version_cmd.clone()
+        };
+
         #[cfg(windows)]
         {
             let output = std::process::Command::new("cmd")
-                .args(["/C", &install_info.version_cmd])
+                .suppress_console()
+                .args(["/C", &resolved_version_cmd])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output()
@@ -489,7 +515,8 @@ impl ToolManagerService {
         #[cfg(not(windows))]
         {
             let output = tokio::process::Command::new("sh")
-                .args(["-c", &install_info.version_cmd])
+                .suppress_console()
+                .args(["-c", &resolved_version_cmd])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output()
@@ -514,6 +541,7 @@ impl ToolManagerService {
                 #[cfg(windows)]
                 {
                     let output = std::process::Command::new("cmd")
+                        .suppress_console()
                         .args(["/C", &format!("npm view {} version", package)])
                         .stdout(Stdio::piped())
                         .stderr(Stdio::piped())
@@ -529,6 +557,7 @@ impl ToolManagerService {
                 #[cfg(not(windows))]
                 {
                     let output = tokio::process::Command::new("sh")
+                        .suppress_console()
                         .args(["-c", &format!("npm view {} version", package)])
                         .stdout(Stdio::piped())
                         .stderr(Stdio::piped())
@@ -547,6 +576,7 @@ impl ToolManagerService {
             #[cfg(not(windows))]
             if let InstallMethod::Brew { package } = method {
                 let output = tokio::process::Command::new("sh")
+                    .suppress_console()
                     .args(["-c", &format!("brew info {} 2>/dev/null | head -1", package)])
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
@@ -573,26 +603,26 @@ impl ToolManagerService {
             #[cfg(not(windows))]
             InstallMethod::Brew { package } => {
                 let mut cmd = tokio::process::Command::new("brew");
-                cmd.arg("install").arg(package);
+                cmd.suppress_console().arg("install").arg(package);
                 Self::execute_command(&mut cmd).await
             }
             #[cfg(windows)]
             InstallMethod::Brew { package } => {
                 let mut cmd = std::process::Command::new("brew");
-                cmd.arg("install").arg(package);
+                cmd.suppress_console().arg("install").arg(package);
                 Self::execute_command_windows(&mut cmd).await
             }
             InstallMethod::Npm { package } => {
                 #[cfg(windows)]
                 {
                     let mut cmd = std::process::Command::new("cmd");
-                    cmd.args(["/C", "npm", "install", "-g", package]);
+                    cmd.suppress_console().args(["/C", "npm", "install", "-g", package]);
                     Self::execute_command_windows(&mut cmd).await?;
                 }
                 #[cfg(not(windows))]
                 {
                     let mut cmd = tokio::process::Command::new("npm");
-                    cmd.arg("install").arg("-g").arg(package);
+                    cmd.suppress_console().arg("install").arg("-g").arg(package);
                     Self::execute_command(&mut cmd).await?;
                 }
                 ensure_npm_path_in_shell_config()?;
@@ -602,7 +632,7 @@ impl ToolManagerService {
             InstallMethod::Curl { url } => {
                 let script = format!("curl -fsSL {} | bash", url);
                 let mut cmd = tokio::process::Command::new("sh");
-                cmd.arg("-c").arg(&script);
+                cmd.suppress_console().arg("-c").arg(&script);
                 Self::execute_command(&mut cmd).await
             }
             #[cfg(windows)]
@@ -613,7 +643,7 @@ impl ToolManagerService {
                 #[cfg(windows)]
                 {
                     let mut cmd = std::process::Command::new("cmd");
-                    cmd.args(["/C", command]);
+                    cmd.suppress_console().args(["/C", command]);
                     Self::execute_command_windows(&mut cmd).await
                 }
                 #[cfg(not(windows))]
@@ -622,7 +652,7 @@ impl ToolManagerService {
                     let program = parts.next().ok_or("Empty command")?;
                     let args: Vec<&str> = parts.collect();
                     let mut cmd = tokio::process::Command::new(program);
-                    cmd.args(&args);
+                    cmd.suppress_console().args(&args);
                     Self::execute_command(&mut cmd).await
                 }
             }
@@ -650,7 +680,7 @@ impl ToolManagerService {
                     })
                     .unwrap_or_else(|| app.name().to_lowercase());
                 let mut cmd = tokio::process::Command::new("brew");
-                cmd.arg("upgrade").arg(&package);
+                cmd.suppress_console().arg("upgrade").arg(&package);
                 Self::execute_command(&mut cmd).await
             }
             #[cfg(windows)]
@@ -665,7 +695,7 @@ impl ToolManagerService {
                     })
                     .unwrap_or_else(|| app.name().to_lowercase());
                 let mut cmd = std::process::Command::new("winget");
-                cmd.args(["upgrade", "--id", &package, "-e"]);
+                cmd.suppress_console().args(["upgrade", "--id", &package, "-e"]);
                 Self::execute_command_windows(&mut cmd).await
             }
             #[cfg(windows)]
@@ -680,7 +710,7 @@ impl ToolManagerService {
                     })
                     .unwrap_or_else(|| app.name().to_lowercase());
                 let mut cmd = std::process::Command::new("scoop");
-                cmd.args(["update", &package]);
+                cmd.suppress_console().args(["update", &package]);
                 Self::execute_command_windows(&mut cmd).await
             }
             Some(InstallMethodType::Npm) => {
@@ -696,13 +726,13 @@ impl ToolManagerService {
                 #[cfg(windows)]
                 {
                     let mut cmd = std::process::Command::new("cmd");
-                    cmd.args(["/C", "npm", "install", "-g", &format!("{}@latest", package)]);
+                    cmd.suppress_console().args(["/C", "npm", "install", "-g", &format!("{}@latest", package)]);
                     Self::execute_command_windows(&mut cmd).await
                 }
                 #[cfg(not(windows))]
                 {
                     let mut cmd = tokio::process::Command::new("npm");
-                    cmd.arg("install").arg("-g").arg(format!("{}@latest", package));
+                    cmd.suppress_console().arg("install").arg("-g").arg(format!("{}@latest", package));
                     Self::execute_command(&mut cmd).await
                 }
             }
@@ -718,14 +748,14 @@ impl ToolManagerService {
                     }) {
                     let script = format!("curl -fsSL {} | bash", url);
                     let mut cmd = tokio::process::Command::new("sh");
-                    cmd.arg("-c").arg(&script);
+                    cmd.suppress_console().arg("-c").arg(&script);
                     Self::execute_command(&mut cmd).await
                 } else if !install_info.update_cmd.is_empty() {
                     let mut parts = install_info.update_cmd.split_whitespace();
                     let program = parts.next().ok_or("Empty update command")?;
                     let args: Vec<&str> = parts.collect();
                     let mut cmd = tokio::process::Command::new(program);
-                    cmd.args(&args);
+                    cmd.suppress_console().args(&args);
                     Self::execute_command(&mut cmd).await
                 } else {
                     Err("此工具不支持自动更新，请手动下载新版本".into())
@@ -742,7 +772,7 @@ impl ToolManagerService {
                 #[cfg(windows)]
                 {
                     let mut cmd = std::process::Command::new("cmd");
-                    cmd.args(["/C", &install_info.update_cmd]);
+                    cmd.suppress_console().args(["/C", &install_info.update_cmd]);
                     Self::execute_command_windows(&mut cmd).await
                 }
                 #[cfg(not(windows))]
@@ -751,7 +781,7 @@ impl ToolManagerService {
                     let program = parts.next().ok_or("Empty update command")?;
                     let args: Vec<&str> = parts.collect();
                     let mut cmd = tokio::process::Command::new(program);
-                    cmd.args(&args);
+                    cmd.suppress_console().args(&args);
                     Self::execute_command(&mut cmd).await
                 }
             }
@@ -774,7 +804,7 @@ impl ToolManagerService {
                     })
                     .unwrap_or_else(|| app.name().to_lowercase());
                 let mut cmd = std::process::Command::new("winget");
-                cmd.args(["upgrade", "--id", &package, "-e"]);
+                cmd.suppress_console().args(["upgrade", "--id", &package, "-e"]);
                 Self::execute_command_windows(&mut cmd).await
             }
             #[cfg(windows)]
@@ -789,7 +819,7 @@ impl ToolManagerService {
                     })
                     .unwrap_or_else(|| app.name().to_lowercase());
                 let mut cmd = std::process::Command::new("scoop");
-                cmd.args(["update", &package]);
+                cmd.suppress_console().args(["update", &package]);
                 Self::execute_command_windows(&mut cmd).await
             }
             None => {
@@ -797,7 +827,7 @@ impl ToolManagerService {
                     #[cfg(windows)]
                     {
                         let mut cmd = std::process::Command::new("cmd");
-                        cmd.args(["/C", &install_info.update_cmd]);
+                        cmd.suppress_console().args(["/C", &install_info.update_cmd]);
                         Self::execute_command_windows(&mut cmd).await
                     }
                     #[cfg(not(windows))]
@@ -806,7 +836,7 @@ impl ToolManagerService {
                         let program = parts.next().ok_or("Empty update command")?;
                         let args: Vec<&str> = parts.collect();
                         let mut cmd = tokio::process::Command::new(program);
-                        cmd.args(&args);
+                        cmd.suppress_console().args(&args);
                         Self::execute_command(&mut cmd).await
                     }
                 } else {
@@ -840,6 +870,7 @@ impl ToolManagerService {
 
     #[cfg(windows)]
     async fn execute_command_windows(cmd: &mut std::process::Command) -> Result<(), String> {
+        cmd.suppress_console();
         let output = cmd
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

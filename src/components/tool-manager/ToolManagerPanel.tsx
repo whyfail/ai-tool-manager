@@ -312,7 +312,7 @@ const ToolManagerPanel: React.FC = () => {
   const [updatingTool, setUpdatingTool] = useState<string | null>(null);
   const [installingTool, setInstallingTool] = useState<string | null>(null);
   const [scanningTool, setScanningTool] = useState<string | null>(null);
-  const [selectedTerminal, setSelectedTerminal] = useState<string>("terminal");
+  const [selectedTerminal, setSelectedTerminal] = useState<string>("");
   const [isTerminalMenuOpen, setIsTerminalMenuOpen] = useState(false);
 
   // 使用共享的工具检测上下文
@@ -329,6 +329,15 @@ const ToolManagerPanel: React.FC = () => {
     queryKey: ["terminals"],
     queryFn: () => invoke<Array<{ id: string; name: string; path: string }>>("get_terminals"),
   });
+
+  // 当终端列表加载后，如果当前选中的终端不在列表中，自动选择第一个可用的终端
+  useEffect(() => {
+    if (terminals && terminals.length > 0) {
+      if (!terminals.some(t => t.id === selectedTerminal)) {
+        setSelectedTerminal(terminals[0].id);
+      }
+    }
+  }, [terminals]);
 
   const installMutation = useMutation({
     mutationFn: ({

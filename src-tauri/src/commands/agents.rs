@@ -8,15 +8,17 @@ use crate::database::McpApps;
 use crate::import::import_from_path;
 use crate::mcp::AppType;
 use crate::services::sync;
+use crate::utils::SuppressConsole;
 use std::process::Command;
 
 /// 检测 Node.js 环境并返回需要添加到 PATH 的路径
 /// 返回 Ok(bin_dir_path) 或 Err(error_message)
+#[cfg(not(windows))]
 fn detect_node_environment() -> Result<String, String> {
     let home = std::env::var("HOME").unwrap_or_default();
 
     // 先检测 node 是否已经可用 (直接用 which)
-    if let Ok(output) = Command::new("which").arg("node").output() {
+    if let Ok(output) = Command::new("which").suppress_console().arg("node").output() {
         if output.status.success() {
             let node_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !node_path.is_empty() {
@@ -49,7 +51,7 @@ fn detect_node_environment() -> Result<String, String> {
     // 检查 fnm
     let fnm_dir = format!("{}/.fnm", home);
     if std::path::Path::new(&fnm_dir).exists() {
-        if let Ok(output) = Command::new("fnm").arg("current").output() {
+        if let Ok(output) = Command::new("fnm").suppress_console().arg("current").output() {
             if output.status.success() {
                 let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
                 if !version.is_empty() {
@@ -84,6 +86,78 @@ fn detect_node_environment() -> Result<String, String> {
     }
     if std::path::Path::new("/usr/local/bin/node").exists() {
         return Ok("/usr/local/bin".to_string());
+    }
+
+    Err("未检测到 Node.js 安装，请先安装: https://nodejs.org".to_string())
+}
+
+/// 检测 Node.js 环境并返回需要添加到 PATH 的路径 (Windows 版本)
+#[cfg(windows)]
+fn detect_node_environment() -> Result<String, String> {
+    // 1. 先尝试 where node 找到 node.exe
+    if let Ok(output) = Command::new("where").suppress_console().arg("node").output() {
+        if output.status.success() {
+            let node_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            // where 可能返回多行，取第一行
+            if let Some(first_line) = node_path.lines().next() {
+                let node_path = first_line.trim();
+                if !node_path.is_empty() {
+                    if let Some(parent) = std::path::Path::new(&node_path).parent() {
+                        return Ok(parent.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    let home = std::env::var("USERPROFILE").unwrap_or_default();
+
+    // 2. 检查 fnm (Windows 常用)
+    if let Ok(output) = Command::new("fnm").suppress_console().arg("current").output() {
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !version.is_empty() {
+                let fnm_path = format!("{}\\AppData\\Roaming\\fnm\\versions\\{}\\installation", home, version);
+                if std::path::Path::new(&fnm_path).exists() {
+                    return Ok(fnm_path);
+                }
+                let fnm_path2 = format!("{}\\.fnm\\versions\\{}\\installation", home, version);
+                if std::path::Path::new(&fnm_path2).exists() {
+                    return Ok(fnm_path2);
+                }
+            }
+        }
+    }
+
+    // 3. 检查 nvm-windows
+    let nvm_home = std::env::var("NVM_HOME").unwrap_or_default();
+    if !nvm_home.is_empty() {
+        let nvm_symlink = format!("{}\\v{}", nvm_home, std::env::var("NVM_SYMLINK").unwrap_or_default());
+        if std::path::Path::new(&nvm_symlink).exists() {
+            return Ok(nvm_symlink);
+        }
+    }
+
+    // 4. 检查 volta
+    let volta_path = format!("{}\\AppData\\Local\\Volta\\bin", home);
+    if std::path::Path::new(&volta_path).exists() {
+        return Ok(volta_path);
+    }
+
+    // 5. 检查 nvmd
+    let nvmd_path = format!("{}\\.nvmd\\bin", home);
+    if std::path::Path::new(&nvmd_path).exists() {
+        return Ok(nvmd_path);
+    }
+
+    // 6. 检查默认 npm 全局目录
+    if let Ok(output) = Command::new("cmd").suppress_console().args(["/C", "npm config get prefix"]).output() {
+        if output.status.success() {
+            let prefix = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !prefix.is_empty() && std::path::Path::new(&prefix).exists() {
+                return Ok(prefix);
+            }
+        }
     }
 
     Err("未检测到 Node.js 安装，请先安装: https://nodejs.org".to_string())
@@ -179,6 +253,7 @@ pub async fn open_config_file(agent_id: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         Command::new("open")
+            .suppress_console()
             .arg(&full_path)
             .spawn()
             .map_err(|e| format!("Failed to open file: {}", e))?;
@@ -186,6 +261,7 @@ pub async fn open_config_file(agent_id: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         Command::new("cmd")
+            .suppress_console()
             .args(["/c", "start", &full_path.to_string_lossy()])
             .spawn()
             .map_err(|e| format!("Failed to open file: {}", e))?;
@@ -193,6 +269,7 @@ pub async fn open_config_file(agent_id: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     {
         Command::new("xdg-open")
+            .suppress_console()
             .arg(&full_path)
             .spawn()
             .map_err(|e| format!("Failed to open file: {}", e))?;
@@ -291,6 +368,7 @@ pub fn get_terminals() -> Vec<TerminalInfo> {
     {
         // Windows Terminal
         if Command::new("where")
+            .suppress_console()
             .arg("wt")
             .output()
             .map(|o| o.status.success())
@@ -305,6 +383,7 @@ pub fn get_terminals() -> Vec<TerminalInfo> {
 
         // PowerShell 7+
         if Command::new("where")
+            .suppress_console()
             .arg("pwsh")
             .output()
             .map(|o| o.status.success())
@@ -319,6 +398,7 @@ pub fn get_terminals() -> Vec<TerminalInfo> {
 
         // Windows PowerShell (5.1)
         if Command::new("where")
+            .suppress_console()
             .arg("powershell")
             .output()
             .map(|o| o.status.success())
@@ -333,6 +413,7 @@ pub fn get_terminals() -> Vec<TerminalInfo> {
 
         // CMD
         if Command::new("where")
+            .suppress_console()
             .arg("cmd")
             .output()
             .map(|o| o.status.success())
@@ -357,6 +438,33 @@ pub fn get_terminals() -> Vec<TerminalInfo> {
     }
 
     terminals
+}
+
+/// 查找 Git Bash 的路径
+#[cfg(target_os = "windows")]
+fn get_git_bash_path() -> Option<String> {
+    let candidates = [
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files (x86)\Git\bin\bash.exe",
+    ];
+    for path in &candidates {
+        if std::path::Path::new(path).exists() {
+            return Some(path.to_string());
+        }
+    }
+    // 尝试通过 where 查找
+    if let Ok(output) = Command::new("where").suppress_console().arg("bash").output() {
+        if output.status.success() {
+            let bash_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if let Some(first_line) = bash_path.lines().next() {
+                let first_line = first_line.trim();
+                if first_line.to_lowercase().contains("git") && std::path::Path::new(first_line).exists() {
+                    return Some(first_line.to_string());
+                }
+            }
+        }
+    }
+    None
 }
 
 fn get_agent_launch_command(app: &AppType) -> Option<String> {
@@ -393,205 +501,179 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
 
     #[cfg(target_os = "macos")]
     {
+        // 统一写临时脚本文件，避免 full_cmd 中的双引号/$PATH 破坏 AppleScript 语法
+        let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
+        let full_cmd = format!(
+            "cd ~/Desktop && export PATH=\"{}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {}; exec $SHELL",
+            node_bin_dir, command
+        );
+        std::fs::write(&script_path, &full_cmd)
+            .map_err(|e| format!("写入脚本失败: {}", e))?;
+
         match term_id.as_str() {
             "terminal" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir.replace("\"", "\\\""),
-                    command
+                let script = format!(
+                    "tell application \"Terminal\"\n\
+                     activate\n\
+                     do script \"chmod +x {} && {}\"\n\
+                     end tell",
+                    script_path, script_path
                 );
-                // 写入临时脚本文件
-                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
-                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 let output = Command::new("osascript")
-                    .args(["-e", &format!("tell application \"Terminal\" to do script \"chmod +x {0} && {0}\"", script_path)])
+                    .suppress_console()
+                    .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "iterm" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
-                    command
-                );
                 let script = format!(
                     "tell application \"iTerm\"\n\
                      activate\n\
                      create window with default profile\n\
                      tell current session of current window\n\
-                     write text \"{}\"\n\
+                     write text \"source {}\"\n\
                      end tell\n\
                      end tell",
-                    full_cmd
+                    script_path
                 );
                 let output = Command::new("osascript")
+                    .suppress_console()
                     .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "warp" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir,
-                    command
-                );
                 let script = format!(
-                    "tell application \"Warp\" to activate\n\
+                    "tell application \"Warp\"\n\
+                     activate\n\
+                     end tell\n\
                      delay 0.5\n\
                      tell application \"System Events\"\n\
-                     keystroke \"{}\" & return\n\
+                     keystroke \"source {}\" & return\n\
                      end tell",
-                    full_cmd
+                    script_path
                 );
                 let output = Command::new("osascript")
+                    .suppress_console()
                     .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "hyper" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir.replace("\"", "\\\""),
-                    command
+                let script = format!(
+                    "tell application \"Hyper\"\n\
+                     activate\n\
+                     delay 0.5\n\
+                     tell application \"System Events\"\n\
+                     keystroke \"source {}\" & return\n\
+                     end tell\n\
+                     end tell",
+                    script_path
                 );
-                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
-                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 let output = Command::new("osascript")
-                    .args(["-e", &format!(
-                        "tell application \"Hyper\"\n\
-                         activate\n\
-                         delay 0.5\n\
-                         tell application \"System Events\"\n\
-                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
-                         end tell",
-                        script_path
-                    )])
+                    .suppress_console()
+                    .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "kitty" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir.replace("\"", "\\\""),
-                    command
+                let script = format!(
+                    "tell application \"Kitty\"\n\
+                     activate\n\
+                     delay 0.5\n\
+                     tell application \"System Events\"\n\
+                     keystroke \"source {}\" & return\n\
+                     end tell\n\
+                     end tell",
+                    script_path
                 );
-                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
-                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 let output = Command::new("osascript")
-                    .args(["-e", &format!(
-                        "tell application \"Kitty\"\n\
-                         activate\n\
-                         delay 0.5\n\
-                         tell application \"System Events\"\n\
-                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
-                         end tell",
-                        script_path
-                    )])
+                    .suppress_console()
+                    .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "alacritty" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir.replace("\"", "\\\""),
-                    command
+                let script = format!(
+                    "tell application \"Alacritty\"\n\
+                     activate\n\
+                     delay 0.5\n\
+                     tell application \"System Events\"\n\
+                     keystroke \"source {}\" & return\n\
+                     end tell\n\
+                     end tell",
+                    script_path
                 );
-                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
-                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 let output = Command::new("osascript")
-                    .args(["-e", &format!(
-                        "tell application \"Alacritty\"\n\
-                         activate\n\
-                         delay 0.5\n\
-                         tell application \"System Events\"\n\
-                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
-                         end tell",
-                        script_path
-                    )])
+                    .suppress_console()
+                    .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "fig" => {
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir.replace("\"", "\\\""),
-                    command
+                let script = format!(
+                    "tell application \"Fig\"\n\
+                     activate\n\
+                     delay 0.5\n\
+                     tell application \"System Events\"\n\
+                     keystroke \"source {}\" & return\n\
+                     end tell\n\
+                     end tell",
+                    script_path
                 );
-                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
-                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 let output = Command::new("osascript")
-                    .args(["-e", &format!(
-                        "tell application \"Fig\"\n\
-                         activate\n\
-                         delay 0.5\n\
-                         tell application \"System Events\"\n\
-                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
-                         end tell",
-                        script_path
-                    )])
+                    .suppress_console()
+                    .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             "kaku" => {
-                // Kaku 是基于 WezTerm 的终端
-                let full_cmd = format!(
-                    "cd ~/Desktop && export PATH=\"{0}:$PATH:/usr/local/bin:/opt/homebrew/bin\" && {1}",
-                    node_bin_dir.replace("\"", "\\\""),
-                    command
+                let script = format!(
+                    "tell application \"Kaku\"\n\
+                     activate\n\
+                     delay 0.5\n\
+                     tell application \"System Events\"\n\
+                     keystroke \"source {}\" & return\n\
+                     end tell\n\
+                     end tell",
+                    script_path
                 );
-                let script_path = format!("/tmp/ai_toolkit_run_{}.sh", std::process::id());
-                std::fs::write(&script_path, &full_cmd).map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 let output = Command::new("osascript")
-                    .args(["-e", &format!(
-                        "tell application \"Kaku\"\n\
-                         activate\n\
-                         delay 0.5\n\
-                         tell application \"System Events\"\n\
-                         keystroke \"bash -c \\\"source {}\\\"\" & return\n\
-                         end tell",
-                        script_path
-                    )])
+                    .suppress_console()
+                    .args(["-e", &script])
                     .output()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
                 if !output.status.success() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    return Err(format!("启动 {} 失败: {} {}", agent_id, stdout, stderr));
+                    return Err(format!("启动 {} 失败: {}", agent_id, stderr));
                 }
             }
             _ => {
@@ -602,30 +684,31 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
 
     #[cfg(target_os = "windows")]
     {
-        use std::env;
-
-        let desktop_path = env::var("USERPROFILE")
-            .map(|p| format!("{}\\Desktop", p))
-            .unwrap_or_else(|_| "C:\\Users\\Public\\Desktop".to_string());
+        let desktop_path = dirs::desktop_dir()
+            .or_else(|| dirs::home_dir())
+            .ok_or("无法获取桌面路径")?
+            .to_string_lossy()
+            .to_string();
 
         match term_id.as_str() {
             "windows-terminal" => {
+                // Windows Terminal 使用 PowerShell 语法
                 let full_cmd = format!(
-                    "cd /d \"{}\" && set PATH=\"{};%PATH%\" && {}",
+                    "cd '{}'; $env:PATH = '{};' + $env:PATH; {}",
                     desktop_path,
-                    node_bin_dir.replace("\\", "\\\\"),
+                    node_bin_dir,
                     command
                 );
                 Command::new("wt")
-                    .args(["new-tab", "powershell", "-c", &full_cmd])
+                    .args(["new-tab", "powershell", "-NoExit", "-c", &full_cmd])
                     .spawn()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
             }
             "pwsh" => {
                 let full_cmd = format!(
-                    "cd \"{}\"; $env:PATH=\"{};$env:PATH\"; {}",
+                    "cd '{}'; $env:PATH = '{};' + $env:PATH; {}",
                     desktop_path,
-                    node_bin_dir.replace("\\", "\\\\"),
+                    node_bin_dir,
                     command
                 );
                 Command::new("pwsh")
@@ -635,9 +718,9 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
             }
             "powershell" => {
                 let full_cmd = format!(
-                    "cd \"{}\"; $env:PATH=\"{};$env:PATH\"; {}",
+                    "cd '{}'; $env:PATH = '{};' + $env:PATH; {}",
                     desktop_path,
-                    node_bin_dir.replace("\\", "\\\\"),
+                    node_bin_dir,
                     command
                 );
                 Command::new("powershell")
@@ -646,25 +729,28 @@ pub async fn launch_agent(agent_id: String, terminal_id: Option<String>) -> Resu
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
             }
             "cmd" => {
+                // start 命令的第一个带引号参数被当作窗口标题
                 let full_cmd = format!(
-                    "cd /d \"{}\" && set PATH=\"{};%PATH%\" && {}",
+                    "cd /d \"{}\" && set PATH={};%PATH% && {}",
                     desktop_path,
-                    node_bin_dir.replace("\\", "\\\\"),
+                    node_bin_dir,
                     command
                 );
                 Command::new("cmd")
-                    .args(["/c", "start", "cmd", "/k", &full_cmd])
+                    .args(["/c", "start", &format!("启动 {}", agent_id), "cmd", "/k", &full_cmd])
                     .spawn()
                     .map_err(|e| format!("启动 {} 失败: {}", agent_id, e))?;
             }
             "git-bash" => {
+                let git_bash_path = get_git_bash_path()
+                    .ok_or("未找到 Git Bash，请确保已安装 Git")?;
+                // Git Bash 路径需要转为正斜杠，添加 exec bash 作为 fallback
                 let full_cmd = format!(
-                    "cd \"{}\" && export PATH=\"{}:$PATH\" && {}",
+                    "cd '{}'; export PATH=\"{}:$PATH\"; {}; exec bash",
                     desktop_path.replace("\\", "/"),
                     node_bin_dir.replace("\\", "/"),
                     command
                 );
-                let git_bash_path = r"C:\Program Files\Git\bin\bash.exe";
                 Command::new(git_bash_path)
                     .args(["-c", &full_cmd])
                     .spawn()

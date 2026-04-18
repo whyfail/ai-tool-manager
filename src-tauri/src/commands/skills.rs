@@ -348,7 +348,13 @@ fn clone_to_cache_for_list(clone_url: &str, branch: Option<&str>) -> Result<(Pat
 
     let repo_dir = cache_root.join(repo_key);
     let revision = clone_or_pull(clone_url, &repo_dir, branch)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            // clone 失败时清理残留目录，避免后续 clone 报 "already exists"
+            if repo_dir.exists() {
+                let _ = std::fs::remove_dir_all(&repo_dir);
+            }
+            e.to_string()
+        })?;
 
     Ok((repo_dir, revision))
 }

@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+#[cfg(windows)]
+use crate::utils::SuppressConsole;
 
 #[derive(Clone, Debug)]
 pub enum SyncMode {
@@ -151,6 +153,7 @@ fn remove_path_any(path: &Path) -> Result<()> {
         #[cfg(windows)]
         {
             let exit = std::process::Command::new("cmd")
+                .suppress_console()
                 .args(["/c", "rmdir", path.to_string_lossy().as_ref()])
                 .output();
             if let Ok(output) = exit {
@@ -179,6 +182,7 @@ fn is_same_link(link_path: &Path, target: &Path) -> bool {
     #[cfg(windows)]
     {
         let output = std::process::Command::new("fsutil")
+            .suppress_console()
             .args(["reparsepoint", "query", link_path.to_string_lossy().as_ref()])
             .output();
         if let Ok(output) = output {
