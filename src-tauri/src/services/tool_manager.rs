@@ -81,6 +81,22 @@ fn ensure_npm_path_unix() -> Result<(), String> {
     }
 
     let prefix = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if prefix.is_empty() {
+        return Ok(());
+    }
+
+    // Skip if npm is managed by a version manager (nvm, nvmd, fnm, volta, etc.)
+    // These tools already handle PATH setup via their own init scripts
+    let version_manager_paths = [
+        "/.nvm/versions/node",
+        "/.nvmd/versions/",
+        "/.fnm/versions/node",
+        "/.volta/",
+    ];
+    if version_manager_paths.iter().any(|p| prefix.contains(p)) {
+        return Ok(());
+    }
+
     let bin_path = format!("{}/bin", prefix);
 
     let zshrc_path = std::path::PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".zshrc");
@@ -185,20 +201,55 @@ pub fn which_binary(binary: &str) -> Option<String> {
         format!("{}/.brew/bin/{}", home, binary),
         format!("/opt/homebrew/bin/{}", binary),
         format!("/usr/local/bin/{}", binary),
-        // nvm
-        format!("{}/.nvm/versions/node/default/bin/{}", home, binary),
         // fnm
         format!("{}/.fnm/versions/node-default/bin/{}", home, binary),
         // volta
         format!("{}/.volta/bin/{}", home, binary),
-        // nvmd
-        format!("{}/.nvmd/bin/{}", home, binary),
         // npm global (via npm config get prefix)
     ];
 
     for path in &common_paths {
         if std::path::Path::new(path).exists() {
             return Some(path.clone());
+        }
+    }
+
+    // nvmd (nvm-desktop): read default version, then check that version's bin dir
+    let nvmd_dir = format!("{}/.nvmd", home);
+    let nvmd_default_file = format!("{}/default", nvmd_dir);
+    if let Ok(default_ver) = std::fs::read_to_string(&nvmd_default_file) {
+        let default_ver = default_ver.trim();
+        if !default_ver.is_empty() {
+            let bin_path = format!("{}/versions/{}/bin/{}", nvmd_dir, default_ver, binary);
+            if std::path::Path::new(&bin_path).exists() {
+                return Some(bin_path);
+            }
+        }
+    }
+    // nvmd fallback: also check ~/.nvmd/bin/ (shim directory)
+    let nvmd_shim = format!("{}/bin/{}", nvmd_dir, binary);
+    if std::path::Path::new(&nvmd_shim).exists() {
+        return Some(nvmd_shim);
+    }
+    // nvmd fallback: iterate all version directories
+    let nvmd_versions_dir = format!("{}/versions", nvmd_dir);
+    if let Ok(entries) = std::fs::read_dir(&nvmd_versions_dir) {
+        for entry in entries.flatten() {
+            let bin_path = entry.path().join("bin").join(binary);
+            if bin_path.exists() {
+                return Some(bin_path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // nvm: iterate version directories under ~/.nvm/versions/node/
+    let nvm_node_dir = format!("{}/.nvm/versions/node", home);
+    if let Ok(entries) = std::fs::read_dir(&nvm_node_dir) {
+        for entry in entries.flatten() {
+            let bin_path = entry.path().join("bin").join(binary);
+            if bin_path.exists() {
+                return Some(bin_path.to_string_lossy().to_string());
+            }
         }
     }
 
