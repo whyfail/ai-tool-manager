@@ -908,11 +908,16 @@ pub async fn rename_skill(
 #[tauri::command]
 pub async fn get_skill_readme(skill_name: String) -> Result<String, String> {
     let central_dir = resolve_central_repo_path().map_err(|e| e.to_string())?;
-    let skill_path = central_dir.join(&skill_name).join("SKILL.md");
+    let skill_dir = central_dir.join(&skill_name);
 
-    if !skill_path.exists() {
+    // Try SKILL.md first, then skill.md
+    let skill_path = if skill_dir.join("SKILL.md").exists() {
+        skill_dir.join("SKILL.md")
+    } else if skill_dir.join("skill.md").exists() {
+        skill_dir.join("skill.md")
+    } else {
         return Err("SKILL.md 文件不存在".to_string());
-    }
+    };
 
     std::fs::read_to_string(&skill_path)
         .map_err(|e| format!("读取文件失败: {}", e))

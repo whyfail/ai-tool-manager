@@ -96,46 +96,10 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
       }
 
       setGitCandidates(candidates);
+      setSelectedGitCandidates([candidates[0]]);
+      setGitName(candidates[0].name);
 
-      if (candidates.length === 1) {
-        // 单个技能：自动选中并开始安装
-        setSelectedGitCandidates([candidates[0]]);
-        setGitName(candidates[0].name);
-        // 直接触发安装
-        const selectedTools = tools.filter(tool => syncTargets[tool.id]);
-        setLoading(true);
-        try {
-          const created = await invoke<{
-            id: string;
-            name: string;
-            central_path: string;
-          }>('install_git_selection', {
-            repoUrl: gitUrl.trim(),
-            subpath: candidates[0].subpath,
-            name: candidates[0].name,
-          });
-
-          for (const tool of selectedTools) {
-            await invoke('sync_skill_to_tool', {
-              skillId: created.id,
-              skillName: created.name,
-              tool: tool.id,
-              sourcePath: created.central_path,
-            });
-          }
-
-          setGitUrl('');
-          setGitName('');
-          toast.success(`技能 "${created.name}" 添加成功`);
-          onClose();
-          onSkillAdded();
-        } catch (err) {
-          console.error('[DEBUG] install_git error:', err);
-          setError(err instanceof Error ? err.message : String(err));
-        } finally {
-          setLoading(false);
-        }
-      } else {
+      if (candidates.length > 1) {
         // 多个技能：弹出选择窗口
         setShowGitPickModal(true);
       }
@@ -145,7 +109,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
     } finally {
       setGitScanLoading(false);
     }
-  }, [gitUrl, tools, syncTargets, onClose, onSkillAdded]);
+  }, [gitUrl]);
 
   const handleGitCandidateToggle = useCallback((candidate: GitSkillCandidate) => {
     setSelectedGitCandidates((prev) => {
@@ -158,19 +122,60 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
     });
   }, []);
 
-  // GitPickModal 确认后直接开始安装
-  const handleGitCandidatesConfirm = useCallback(async () => {
+  // GitPickModal 确认：仅关闭弹窗，数据已回填到 selectedGitCandidates
+  const handleGitCandidatesConfirm = useCallback(() => {
     if (selectedGitCandidates.length === 0) {
       toast.warning('请先选择要安装的技能');
       return;
     }
 
     setShowGitPickModal(false);
+  }, [selectedGitCandidates]);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setDetailSkill(null);
+    // Reset git scanning state when switching tabs
+    if (tab !== 'git') {
+      setGitCandidates([]);
+      setSelectedGitCandidates([]);
+      setGitScanError(null);
+    }
+  };
+
+  const handlePickLocalPath = useCallback(async () => {
+    try {
+      const selected = await dialog.open({
+        directory: true,
+        multiple: false,
+        title: '选择本地文件夹'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      setLocalPath(selected);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  // 点击"添加技能"按钮：有预选 candidates 则安装，否则先扫描
+  const handleCreateGit = useCallback(async () => {
+    if (!gitUrl.trim()) {
+      setError('请输入Git仓库URL');
+      return;
+    }
+
+    // 如果没有预选 candidates，先扫描
+    if (selectedGitCandidates.length === 0) {
+      await handleScanGitRepo();
+      return;
+    }
+
+    // 有预选 candidates，开始安装
+    const selectedTools = tools.filter(tool => syncTargets[tool.id]);
     setLoading(true);
     setError(null);
 
     try {
-      const selectedTools = tools.filter(tool => syncTargets[tool.id]);
       const installedNames: string[] = [];
 
       for (const candidate of selectedGitCandidates) {
@@ -181,7 +186,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
         }>('install_git_selection', {
           repoUrl: gitUrl.trim(),
           subpath: candidate.subpath,
-          name: gitName.trim() || undefined,
+          name: candidate.name,
         });
 
         for (const tool of selectedTools) {
@@ -209,49 +214,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
     } finally {
       setLoading(false);
     }
-  }, [selectedGitCandidates, gitUrl, gitName, tools, syncTargets, onClose, onSkillAdded]);
-
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setDetailSkill(null);
-    // Reset git scanning state when switching tabs
-    if (tab !== 'git') {
-      setGitCandidates([]);
-      setSelectedGitCandidates([]);
-      setGitScanError(null);
-    }
-  };
-
-  const handlePickLocalPath = useCallback(async () => {
-    try {
-      const selected = await dialog.open({
-        directory: true,
-        multiple: false,
-        title: '选择本地文件夹'
-      });
-      if (!selected || Array.isArray(selected)) return;
-      setLocalPath(selected);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, []);
-
-  // 直接安装（已有预选 candidates 时调用）
-  const handleCreateGit = useCallback(async () => {
-    if (!gitUrl.trim()) {
-      setError('请输入Git仓库URL');
-      return;
-    }
-
-    // 如果没有预选 candidates，先扫描
-    if (selectedGitCandidates.length === 0) {
-      await handleScanGitRepo();
-      return;
-    }
-
-    // 有预选 candidates，直接安装
-    await handleGitCandidatesConfirm();
-  }, [gitUrl, selectedGitCandidates, handleScanGitRepo, handleGitCandidatesConfirm]);
+  }, [gitUrl, selectedGitCandidates, handleScanGitRepo, tools, syncTargets, onClose, onSkillAdded]);
 
   const handleCreateLocal = useCallback(async () => {
     if (!localPath.trim()) {
@@ -552,8 +515,15 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                               className="group relative flex items-center gap-2 px-3 py-2 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--primary))/5] pr-8"
                             >
                               <GitBranch size={12} className="text-[hsl(var(--primary))] flex-shrink-0" />
-                              <span className="text-sm font-medium">{candidate.name}</span>
-                              <span className="text-xs text-[hsl(var(--muted-foreground))] font-mono">
+                              <div className="min-w-0">
+                                <span className="text-sm font-medium">{candidate.name}</span>
+                                {candidate.description && (
+                                  <span className="text-xs text-[hsl(var(--muted-foreground))] ml-2">
+                                    {candidate.description}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-[hsl(var(--muted-foreground))] font-mono flex-shrink-0">
                                 {candidate.subpath}
                               </span>
                               <button
@@ -565,12 +535,14 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                             </div>
                           ))}
                         </div>
-                        <button
-                          onClick={() => setShowGitPickModal(true)}
-                          className="text-xs text-[hsl(var(--primary))] hover:underline"
-                        >
-                          继续添加
-                        </button>
+                        {gitCandidates.length > 1 && (
+                          <button
+                            onClick={() => setShowGitPickModal(true)}
+                            className="text-xs text-[hsl(var(--primary))] hover:underline"
+                          >
+                            继续添加
+                          </button>
+                        )}
                       </div>
                     )}
 

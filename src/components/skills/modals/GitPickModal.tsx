@@ -28,7 +28,7 @@ function GitPickModal({ open, candidates, selected, loading, onToggle, onConfirm
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[hsl(var(--border))]">
           <div>
-            <h2 className="text-base sm:text-lg font-semibold">选择要安装的技能</h2>
+            <h2 className="text-base sm:text-lg font-semibold">选择技能</h2>
             <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
               已选择 {selected.length} 个技能
             </p>
@@ -109,7 +109,7 @@ function GitPickModal({ open, candidates, selected, loading, onToggle, onConfirm
             disabled={selected.length === 0}
             className="flex-1 px-4 py-2.5 bg-[hsl(var(--primary))] hover:brightness-[0.9] text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            添加 {selected.length > 0 ? `(${selected.length})` : ''}
+            确认选择 {selected.length > 0 ? `(${selected.length})` : ''}
           </button>
         </div>
       </div>

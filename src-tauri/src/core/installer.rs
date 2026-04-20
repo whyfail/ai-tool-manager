@@ -29,9 +29,9 @@ const SKILL_SCAN_BASES: [&str; 5] = [
     ".claude/skills",
 ];
 
-/// Check if a directory is a valid skill (has SKILL.md or is under .claude/skills/).
+/// Check if a directory is a valid skill (has SKILL.md/skill.md or is under .claude/skills/).
 fn is_skill_dir(p: &Path) -> bool {
-    p.is_dir() && (p.join("SKILL.md").exists() || is_claude_skill_dir(p))
+    p.is_dir() && (find_skill_md(p).is_some() || is_claude_skill_dir(p))
 }
 
 /// Check if a directory is a Claude plugin skill (under .claude/skills/ without SKILL.md).
@@ -45,10 +45,22 @@ fn is_claude_skill_dir(p: &Path) -> bool {
     false
 }
 
+/// Find SKILL.md or skill.md in a directory (case-insensitive, prefer uppercase).
+fn find_skill_md(dir: &Path) -> Option<PathBuf> {
+    let upper = dir.join("SKILL.md");
+    if upper.exists() {
+        return Some(upper);
+    }
+    let lower = dir.join("skill.md");
+    if lower.exists() {
+        return Some(lower);
+    }
+    None
+}
+
 /// Extract name and description for a skill directory.
 fn extract_skill_info(skill_dir: &Path) -> (String, Option<String>) {
-    let skill_md = skill_dir.join("SKILL.md");
-    if skill_md.exists() {
+    if let Some(skill_md) = find_skill_md(skill_dir) {
         if let Some((name, desc)) = parse_skill_md(&skill_md) {
             return (name, desc);
         }
@@ -73,9 +85,8 @@ pub fn scan_git_skill_candidates(repo_dir: &Path) -> Vec<GitSkillCandidate> {
     let mut out = Vec::new();
 
     // Root-level skill
-    let root_skill = repo_dir.join("SKILL.md");
-    if root_skill.exists() {
-        if let Some((name, desc)) = parse_skill_md(&root_skill) {
+    if let Some(skill_md) = find_skill_md(repo_dir) {
+        if let Some((name, desc)) = parse_skill_md(&skill_md) {
             out.push(GitSkillCandidate {
                 name,
                 description: desc,
@@ -96,9 +107,9 @@ pub fn scan_git_skill_candidates(repo_dir: &Path) -> Vec<GitSkillCandidate> {
             if dir_name == "skills" || dir_name.starts_with('.') {
                 continue;
             }
-            if p.join("SKILL.md").exists() {
+            if let Some(skill_md) = find_skill_md(&p) {
                 let (name, desc) =
-                    parse_skill_md(&p.join("SKILL.md")).unwrap_or((dir_name.to_string(), None));
+                    parse_skill_md(&skill_md).unwrap_or((dir_name.to_string(), None));
                 let rel = p
                     .strip_prefix(repo_dir)
                     .unwrap_or(&p)
@@ -269,10 +280,10 @@ pub fn install_git_skill(
     }
 
     // After download, prefer the name from SKILL.md over the derived name
-    let (_description, md_name) = match parse_skill_md(&central_path.join("SKILL.md")) {
-        Some((n, d)) => (d, Some(n)),
-        None => (None, None),
-    };
+    let (_description, md_name) = find_skill_md(&central_path)
+        .and_then(|p| parse_skill_md(&p))
+        .map(|(n, d)| (d, Some(n)))
+        .unwrap_or((None, None));
 
     if !user_provided_name {
         if let Some(ref better_name) = md_name {
@@ -349,10 +360,10 @@ pub fn install_git_skill_from_selection(
         .with_context(|| format!("copy {:?} -> {:?}", copy_src, central_path))?;
 
     // Prefer name from SKILL.md
-    let (_description, md_name) = match parse_skill_md(&central_path.join("SKILL.md")) {
-        Some((n, d)) => (d, Some(n)),
-        None => (None, None),
-    };
+    let (_description, md_name) = find_skill_md(&central_path)
+        .and_then(|p| parse_skill_md(&p))
+        .map(|(n, d)| (d, Some(n)))
+        .unwrap_or((None, None));
 
     if !user_provided_name {
         if let Some(ref better_name) = md_name {
@@ -613,24 +624,51 @@ fn parse_skill_md(path: &Path) -> Option<(String, Option<String>)> {
 fn parse_skill_md_with_reason(path: &Path) -> Result<(String, Option<String>), &'static str> {
     let text = std::fs::read_to_string(path).map_err(|_| "read_failed")?;
     let mut lines = text.lines();
-    if lines.next().map(|v| v.trim()) != Some("---") {
-        return Err("invalid_frontmatter");
-    }
+
+    // Support two formats:
+    // 1. Standard: first line is "---", fields follow, closing "---"
+    // 2. Relaxed: first line is a field (e.g. "name: ..."), fields continue until "---" or end-of-header
     let mut name: Option<String> = None;
     let mut desc: Option<String> = None;
     let mut found_end = false;
-    for line in lines.by_ref() {
-        let l = line.trim();
-        if l == "---" {
-            found_end = true;
-            break;
+
+    if lines.next().map(|v| v.trim()) == Some("---") {
+        // Standard frontmatter
+        for line in lines.by_ref() {
+            let l = line.trim();
+            if l == "---" {
+                found_end = true;
+                break;
+            }
+            if let Some(v) = l.strip_prefix("name:") {
+                name = Some(v.trim().trim_matches('"').to_string());
+            } else if let Some(v) = l.strip_prefix("description:") {
+                desc = Some(v.trim().trim_matches('"').to_string());
+            }
         }
-        if let Some(v) = l.strip_prefix("name:") {
-            name = Some(v.trim().trim_matches('"').to_string());
-        } else if let Some(v) = l.strip_prefix("description:") {
-            desc = Some(v.trim().trim_matches('"').to_string());
+    } else {
+        // Relaxed: first line is a field, read until "---" or a non-field line
+        for (i, line) in text.lines().enumerate() {
+            let l = line.trim();
+            if i > 0 && l == "---" {
+                found_end = true;
+                break;
+            }
+            if let Some(v) = l.strip_prefix("name:") {
+                name = Some(v.trim().trim_matches('"').to_string());
+            } else if let Some(v) = l.strip_prefix("description:") {
+                desc = Some(v.trim().trim_matches('"').to_string());
+            } else if i > 0 && !l.is_empty() && !l.contains(':') {
+                // Non-field, non-empty line after fields -> end of header
+                break;
+            }
+        }
+        // In relaxed mode, finding fields is enough even without closing ---
+        if name.is_some() {
+            found_end = true;
         }
     }
+
     if !found_end {
         return Err("invalid_frontmatter");
     }
