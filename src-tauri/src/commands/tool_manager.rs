@@ -47,7 +47,7 @@ pub async fn get_tool_infos() -> Result<Vec<ToolInfo>, String> {
                 Some(info) => info,
                 None => return None,
             };
-            // 首次加载只返回基础安装信息，避免版本/网络检测阻塞首屏。
+            // 返回基础安装信息 + 安装方式检测，版本号延迟到手动扫描时获取
             Some(info)
         })
         .collect();
@@ -70,22 +70,7 @@ pub async fn get_tool_info(app_type: String) -> Result<ToolInfo, String> {
         info.detected_method =
             ToolManagerService::detect_install_method(&app)
                 .await
-                .map(|m| match m {
-                    crate::services::tool_manager::InstallMethodType::Brew => {
-                        "Homebrew".to_string()
-                    }
-                    crate::services::tool_manager::InstallMethodType::Npm => "npm".to_string(),
-                    crate::services::tool_manager::InstallMethodType::Curl => {
-                        "curl 脚本".to_string()
-                    }
-                    crate::services::tool_manager::InstallMethodType::Winget => {
-                        "Winget".to_string()
-                    }
-                    crate::services::tool_manager::InstallMethodType::Scoop => "Scoop".to_string(),
-                    crate::services::tool_manager::InstallMethodType::Custom => {
-                        "自定义".to_string()
-                    }
-                });
+                .map(|m| m.display_name().to_string());
     }
     Ok(info)
 }
@@ -112,4 +97,31 @@ pub fn get_tool_homepage(app_type: String) -> Result<String, String> {
     let app = AppType::from_str(&app_type)?;
     let install_info = app.get_install_info().ok_or("Unknown app type")?;
     Ok(install_info.homepage)
+}
+
+/// 后台批量扫描所有已安装工具的版本号和最新版本号，返回更新后的 ToolInfo 列表
+#[tauri::command]
+pub async fn scan_all_tool_versions() -> Result<Vec<ToolInfo>, String> {
+    use futures::future;
+
+    let apps: Vec<_> = AppType::all();
+
+    let futures: Vec<_> = apps
+        .iter()
+        .map(|app| async move {
+            let mut info = match build_tool_info(app).await {
+                Some(info) => info,
+                None => return None,
+            };
+            if info.installed {
+                info.version = ToolManagerService::get_version(app).await;
+                info.latest_version = ToolManagerService::get_latest_version(app).await;
+            }
+            Some(info)
+        })
+        .collect();
+
+    let results = future::join_all(futures).await;
+    let tools: Vec<ToolInfo> = results.into_iter().filter_map(|x| x).collect();
+    Ok(tools)
 }

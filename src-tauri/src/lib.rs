@@ -168,6 +168,7 @@ pub fn run() {
             commands::tool_manager::install_tool,
             commands::tool_manager::update_tool,
             commands::tool_manager::get_tool_homepage,
+            commands::tool_manager::scan_all_tool_versions,
             // 统一工具检测命令
             commands::tool_detection::get_installed_tools,
             commands::tool_detection::refresh_installed_tools,

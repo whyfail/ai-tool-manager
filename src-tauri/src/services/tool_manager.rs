@@ -13,6 +13,19 @@ pub enum InstallMethodType {
     Custom,
 }
 
+impl InstallMethodType {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            InstallMethodType::Brew => "Homebrew",
+            InstallMethodType::Npm => "npm",
+            InstallMethodType::Curl => "curl 脚本",
+            InstallMethodType::Winget => "Winget",
+            InstallMethodType::Scoop => "Scoop",
+            InstallMethodType::Custom => "自定义",
+        }
+    }
+}
+
 pub struct ToolManagerService;
 
 fn get_binary_name(app: &AppType) -> String {
@@ -37,7 +50,7 @@ fn is_app_installed_mac(app: &AppType) -> bool {
     std::path::Path::new(&format!("/Applications/{}", app_name)).exists()
 }
 
-fn is_app_installed_windows(app: &AppType) -> bool {
+pub fn is_app_installed_windows(app: &AppType) -> bool {
     if !cfg!(windows) {
         return false;
     }
@@ -64,6 +77,10 @@ fn is_app_installed_windows(app: &AppType) -> bool {
         "Trae CN",
         "TRAE SOLO CN",
         "Qoder",
+        "Programs\\Trae",
+        "Programs\\Trae CN",
+        "Programs\\TRAE SOLO CN",
+        "Programs\\Qoder",
         "Microsoft\\WindowsApps",
     ];
 
@@ -998,13 +1015,21 @@ pub async fn build_tool_info(app: &AppType) -> Option<crate::commands::tool_mana
         })
         .collect();
 
+    let detected_method = if installed {
+        ToolManagerService::detect_install_method(app)
+            .await
+            .map(|m| m.display_name().to_string())
+    } else {
+        None
+    };
+
     Some(crate::commands::tool_manager::ToolInfo {
         app_type: app.name().to_string(),
         name: install_info.name,
         installed,
         version: None,
         latest_version: None,
-        detected_method: None,
+        detected_method,
         methods,
         homepage: install_info.homepage,
     })

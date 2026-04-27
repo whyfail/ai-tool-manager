@@ -142,7 +142,7 @@ pub fn default_tool_adapters() -> Vec<ToolAdapter> {
         },
         ToolAdapter {
             id: ToolId::CodeBuddy,
-            display_name: "CodeBuddy",
+            display_name: "CodeBuddy CN CLI",
             relative_skills_dir: ".codebuddy/skills",
             relative_detect_dir: ".codebuddy",
         },

@@ -239,7 +239,7 @@ impl AppType {
                 homepage: "https://qoder.com".into(),
             }),
             Self::CodeBuddy => Some(InstallInfo {
-                name: "CodeBuddy".into(),
+                name: "CodeBuddy CN CLI".into(),
                 methods: vec![
                     InstallMethod::Curl {
                         url: "https://copilot.tencent.com/cli/install.sh".into(),

@@ -149,7 +149,7 @@ pub fn get_agent_name(app: &AppType) -> String {
         AppType::TraeSoloCn => "TRAE SOLO CN".to_string(),
         AppType::Qoder => "Qoder".to_string(),
         AppType::Qodercli => "Qoder CLI".to_string(),
-        AppType::CodeBuddy => "CodeBuddy".to_string(),
+        AppType::CodeBuddy => "CodeBuddy CN CLI".to_string(),
     }
 }
 
@@ -258,13 +258,20 @@ fn is_agent_installed(app: &AppType) -> bool {
         return true;
     }
 
+    // 检查应用数据目录是否存在（比配置文件更可靠，首次启动即创建）
+    if let Some(detect_dir) = get_agent_detect_dir(app) {
+        if detect_dir.exists() {
+            return true;
+        }
+    }
+
     // 检查配置路径是否存在
     let config_paths = get_agent_config_paths(app);
     if config_paths.iter().any(|p| p.exists()) {
         return true;
     }
 
-    // Mac GUI 应用检测（通过检查 /Applications/*.app）
+    // macOS GUI 应用检测（通过检查 /Applications/*.app）
     #[cfg(target_os = "macos")]
     {
         let app_name = match app {
@@ -279,9 +286,12 @@ fn is_agent_installed(app: &AppType) -> bool {
         }
     }
 
-    #[cfg(not(target_os = "macos"))]
+    // Windows GUI 应用检测（搜索 exe 文件）
+    #[cfg(target_os = "windows")]
     {
-        let _ = app;
+        if crate::services::tool_manager::is_app_installed_windows(app) {
+            return true;
+        }
     }
 
     false

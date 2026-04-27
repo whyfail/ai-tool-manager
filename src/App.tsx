@@ -165,7 +165,6 @@ const SettingsTab: React.FC = () => {
   const [installing, setInstalling] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [apps, setApps] = useState<AppConfigInfo[]>([]);
-  const [loadingApps, setLoadingApps] = useState(true);
   const [launchPreferences, setLaunchPreferences] = useState<LaunchPreferences | null>(null);
   const [savingTerminal, setSavingTerminal] = useState(false);
   const appVersion = useAppVersion();
@@ -187,10 +186,6 @@ const SettingsTab: React.FC = () => {
         console.error("获取应用配置失败:", err);
         if (!cancelled) {
           toast.error(`获取应用配置失败: ${err}`);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingApps(false);
         }
       }
     };
@@ -389,21 +384,12 @@ const SettingsTab: React.FC = () => {
           <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
             <h3 className="text-base font-medium mb-4">支持的应用</h3>
             <div className="space-y-2">
-              {loadingApps && (
-                <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-[hsl(var(--muted-foreground))]">
-                  <Loader2 size={14} className="animate-spin" />
-                  正在加载配置路径...
-                </div>
-              )}
               {apps.map((app) => (
                 <div
                   key={app.id}
-                  className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
+                  className="flex items-center py-2.5 px-3 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
                 >
                   <span className="text-sm font-medium">{app.name}</span>
-                  <code className="text-xs text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-2 py-1 rounded">
-                    {app.configPath}
-                  </code>
                 </div>
               ))}
             </div>

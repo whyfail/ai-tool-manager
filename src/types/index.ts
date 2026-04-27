@@ -62,7 +62,7 @@ export const SUPPORTED_APPS: Array<{ id: string; name: string; icon: string }> =
   { id: "trae", name: "Trae", icon: "trae" },
   { id: "trae-cn", name: "Trae CN", icon: "trae-cn" },
   { id: "trae-solo-cn", name: "TRAE SOLO CN", icon: "trae-solo-cn" },
-  { id: "codebuddy", name: "CodeBuddy", icon: "codebuddy" },
+  { id: "codebuddy", name: "CodeBuddy CN CLI", icon: "codebuddy" },
 ];
 
 // 工具安装方式

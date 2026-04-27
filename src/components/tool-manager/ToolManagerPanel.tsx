@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
@@ -322,6 +322,32 @@ const ToolManagerPanel: React.FC = () => {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
+
+  // 首次加载完成后，自动后台扫描版本号
+  const versionScanStarted = useRef(false);
+  useEffect(() => {
+    if (versionScanStarted.current || !tools) return;
+    versionScanStarted.current = true;
+
+    toolApi.scanAllToolVersions().then((scannedTools) => {
+      queryClient.setQueryData(["tool-infos"], (old: any) => {
+        if (!old) return old;
+        const map = new Map(scannedTools.map((t: any) => [t.app_type, t]));
+        return old.map((tool: any) => {
+          const scanned = map.get(tool.app_type);
+          if (!scanned) return tool;
+          // 只更新版本号字段，保留其他字段不变
+          return {
+            ...tool,
+            version: scanned.version ?? tool.version,
+            latest_version: scanned.latest_version ?? tool.latest_version,
+          };
+        });
+      });
+    }).catch(() => {
+      // 后台扫描失败静默处理，不影响用户使用
+    });
+  }, [tools, queryClient]);
 
   const installMutation = useMutation({
     mutationFn: ({

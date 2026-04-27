@@ -70,6 +70,11 @@ export const toolApi = {
     return invoke<ToolInfo>("get_tool_info", { appType });
   },
 
+  // 后台批量扫描所有已安装工具的版本号
+  async scanAllToolVersions(): Promise<ToolInfo[]> {
+    return invoke<ToolInfo[]>("scan_all_tool_versions");
+  },
+
   // 安装工具
   async installTool(appType: string, methodIndex: number): Promise<void> {
     return invoke("install_tool", { appType, methodIndex });
