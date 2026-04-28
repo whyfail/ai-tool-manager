@@ -97,7 +97,7 @@ pub async fn test_mcp_connection(
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": { "name": "ai-toolkit", "version": "1.3.2" }
+                "clientInfo": { "name": "ai-toolkit", "version": "1.4.0" }
             }
         });
 
