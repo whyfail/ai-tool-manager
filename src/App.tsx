@@ -26,6 +26,7 @@ import appLogo from "../src-tauri/icons/128x128.png";
 
 type Tab = "mcp" | "skills" | "tools" | "settings" | "about";
 const GITHUB_REPO_URL = "https://github.com/whyfail/ai-toolkit";
+const OFFICIAL_WEBSITE_URL = "https://whyfail.github.io/ai-toolkit-website/";
 let startupUpdateCheckStarted = false;
 
 const copyText = async (text: string) => {
@@ -209,12 +210,12 @@ const SettingsTab: React.FC = () => {
   const dbPath = isWindows ? "%USERPROFILE%\\.ai-toolkit\\ai-toolkit.db" : "~/.ai-toolkit/ai-toolkit.db";
   const skillsPath = isWindows ? "%USERPROFILE%\\.ai-toolkit\\skills\\" : "~/.ai-toolkit/skills/";
 
-  const copyRepoUrl = async () => {
+  const copyShareUrl = async () => {
     try {
-      await copyText(GITHUB_REPO_URL);
-      toast.success("GitHub 仓库地址已复制");
+      await copyText(OFFICIAL_WEBSITE_URL);
+      toast.success("官网地址已复制");
     } catch (err) {
-      console.error("复制仓库地址失败:", err);
+      console.error("复制官网地址失败:", err);
       toast.error("复制失败，请稍后重试");
     }
   };
@@ -386,14 +387,14 @@ const SettingsTab: React.FC = () => {
             <h3 className="text-base font-medium mb-4">分享应用</h3>
             <div className="flex items-center gap-3">
               <button
-                onClick={copyRepoUrl}
+                onClick={copyShareUrl}
                 className="glass-primary-button"
               >
                 <Share2 size={16} />
-                复制 GitHub 地址
+                复制官网地址
               </button>
               <code className="glass-code min-w-0 flex-1 truncate rounded-xl px-3 py-2 text-xs font-mono text-slate-500 dark:text-slate-400">
-                {GITHUB_REPO_URL}
+                {OFFICIAL_WEBSITE_URL}
               </code>
             </div>
           </section>
