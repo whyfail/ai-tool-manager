@@ -1,12 +1,14 @@
 {
   "name": "ai-toolkit",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "Universal MCP Server & Skills Manager for AI CLI Tools",
   "author": "whyfail",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "oxlint src",
+    "check": "tsc --noEmit && oxlint src",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
@@ -36,6 +38,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
+    "oxlint": "^1.62.0",
     "postcss": "^8.4.47",
     "react-grab": "^0.1.32",
     "tailwindcss": "^3.4.14",

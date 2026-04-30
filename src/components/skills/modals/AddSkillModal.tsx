@@ -31,6 +31,12 @@ type Tab = 'git' | 'local' | 'online';
 /** Git 标签页的阶段：input=输入URL | previewed=已预览 */
 type GitPhase = 'input' | 'previewed';
 
+const formatCount = (n: number) => {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+};
+
 function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, onSkillAdded }: AddSkillModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>('git');
   const [loading, setLoading] = useState(false);
@@ -81,14 +87,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
   // 每个选中候选技能的自定义名称映射：subpath -> 自定义名称
   const [gitSkillNames, setGitSkillNames] = useState<Record<string, string>>({});
 
-  // Load featured skills when entering online tab
-  useEffect(() => {
-    if (activeTab === 'online' && featuredSkills.length === 0) {
-      loadFeaturedSkills();
-    }
-  }, [activeTab]);
-
-  const loadFeaturedSkills = async () => {
+  const loadFeaturedSkills = useCallback(async () => {
     setFeaturedLoading(true);
     try {
       const skills = await invoke<FeaturedSkillDto[]>('get_featured_skills');
@@ -98,7 +97,14 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
     } finally {
       setFeaturedLoading(false);
     }
-  };
+  }, []);
+
+  // Load featured skills when entering online tab
+  useEffect(() => {
+    if (activeTab === 'online' && featuredSkills.length === 0) {
+      loadFeaturedSkills();
+    }
+  }, [activeTab, featuredSkills.length, loadFeaturedSkills]);
 
   const resetGitState = useCallback(() => {
     setGitCandidates([]);
@@ -225,9 +231,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
     setError(null);
 
     try {
-      const installedNames: string[] = [];
-
-      for (const candidate of selectedGitCandidates) {
+      const installedNames = await Promise.all(selectedGitCandidates.map(async (candidate) => {
         // 单个技能用 gitName，多个技能用各自 gitSkillNames 中的值
         const customName = selectedGitCandidates.length === 1
           ? gitName.trim()
@@ -244,17 +248,15 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
           name: skillName,
         });
 
-        for (const tool of selectedTools) {
-          await invoke('sync_skill_to_tool', {
-            skillId: created.id,
-            skillName: created.name,
-            tool: tool.id,
-            sourcePath: created.central_path,
-          });
-        }
+        await Promise.all(selectedTools.map(tool => invoke('sync_skill_to_tool', {
+          skillId: created.id,
+          skillName: created.name,
+          tool: tool.id,
+          sourcePath: created.central_path,
+        })));
 
-        installedNames.push(created.name);
-      }
+        return created.name;
+      }));
 
       setGitUrl('');
       resetGitState();
@@ -288,14 +290,12 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
       });
 
       const selectedTools = tools.filter(tool => syncTargets[tool.id]);
-      for (const tool of selectedTools) {
-        await invoke('sync_skill_to_tool', {
-          skillId: created.id,
-          skillName: created.name,
-          tool: tool.id,
-          sourcePath: created.central_path,
-        });
-      }
+      await Promise.all(selectedTools.map(tool => invoke('sync_skill_to_tool', {
+        skillId: created.id,
+        skillName: created.name,
+        tool: tool.id,
+        sourcePath: created.central_path,
+      })));
 
       setLocalPath('');
       setLocalName('');
@@ -349,12 +349,6 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
   const toggleAllTools = () => {
     const allEnabled = tools.every(t => syncTargets[t.id]);
     tools.forEach(t => onSyncTargetChange(t.id, !allEnabled));
-  };
-
-  const formatCount = (n: number) => {
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-    return String(n);
   };
 
   if (!open) return null;
@@ -531,11 +525,12 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                   <div className="space-y-4">
                     {/* Git 仓库 URL */}
                     <div>
-                      <label className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <label htmlFor="git-url-input" className="text-sm font-medium flex items-center gap-2 mb-2">
                         Git 仓库 URL
                       </label>
                       <div className="flex gap-2">
                         <input
+                          id="git-url-input"
                           type="text"
                           value={gitUrl}
                           onChange={(e) => {
@@ -575,10 +570,11 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                     {gitPhase === 'previewed' && selectedGitCandidates.length === 1 && (
                       <>
                         <div>
-                          <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                          <label htmlFor="git-skill-name-input" className="text-sm font-medium mb-2 flex items-center gap-2">
                             技能名称 <span className="text-[hsl(var(--muted-foreground))] font-normal">(可选)</span>
                           </label>
                           <input
+                            id="git-skill-name-input"
                             type="text"
                             value={gitName}
                             onChange={(e) => setGitName(e.target.value)}
@@ -591,7 +587,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                         {/* 同步到工具 */}
                         <div className="glass-card space-y-3 p-3 sm:p-5">
                           <div className="flex items-center justify-between">
-                            <label className="text-sm font-medium">同步到工具</label>
+                            <span className="text-sm font-medium">同步到工具</span>
                             {tools.length > 0 && (
                               <button
                                 type="button"
@@ -677,10 +673,11 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                 <p className="text-xs text-[hsl(var(--muted-foreground))]">{candidate.description}</p>
                               )}
                               <div>
-                                <label className="text-sm font-medium mb-1.5 block">
+                                <label htmlFor={`git-skill-name-${candidate.subpath}`} className="text-sm font-medium mb-1.5 block">
                                   技能名称 <span className="text-[hsl(var(--muted-foreground))] font-normal text-xs">(可选，留空使用默认)</span>
                                 </label>
                                 <input
+                                  id={`git-skill-name-${candidate.subpath}`}
                                   type="text"
                                   value={gitSkillNames[candidate.subpath] ?? candidate.name}
                                   onChange={(e) =>
@@ -701,7 +698,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                         {/* 同步到工具 */}
                         <div className="glass-card space-y-3 p-3 sm:p-5">
                           <div className="flex items-center justify-between">
-                            <label className="text-sm font-medium">同步到工具</label>
+                            <span className="text-sm font-medium">同步到工具</span>
                             {tools.length > 0 && (
                               <button
                                 type="button"
@@ -757,11 +754,12 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                 {activeTab === 'local' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <label htmlFor="local-path-input" className="text-sm font-medium mb-2 flex items-center gap-2">
                         本地文件夹
                       </label>
                       <div className="flex gap-2">
                         <input
+                          id="local-path-input"
                           type="text"
                           value={localPath}
                           onChange={(e) => {
@@ -787,10 +785,11 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                       </div>
                     )}
                     <div>
-                      <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <label htmlFor="local-skill-name-input" className="text-sm font-medium mb-2 flex items-center gap-2">
                         技能名称 <span className="text-[hsl(var(--muted-foreground))] font-normal">(可选)</span>
                       </label>
                       <input
+                        id="local-skill-name-input"
                         type="text"
                         value={localName}
                         onChange={(e) => setLocalName(e.target.value)}
@@ -806,11 +805,12 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                 {activeTab === 'online' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <label htmlFor="online-skill-search-input" className="text-sm font-medium mb-2 flex items-center gap-2">
                         搜索技能
                       </label>
                       <div className="flex gap-2">
                         <input
+                          id="online-skill-search-input"
                           type="text"
                           value={onlineQuery}
                           onChange={(e) => setOnlineQuery(e.target.value)}
@@ -887,9 +887,9 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                         <p className="text-xs text-[hsl(var(--muted-foreground))]">
                           找到 {searchResults.length} 个技能
                         </p>
-                        {searchResults.map((result, index) => (
+                        {searchResults.map((result) => (
                           <button
-                            key={index}
+                            key={`${result.source_url}-${result.name}`}
                             onClick={() => setDetailSkill(result)}
                             className="glass-card flex w-full items-center justify-between p-3 text-left"
                           >
@@ -923,7 +923,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                 {activeTab === 'local' && (
                   <div className="glass-card space-y-3 p-3 sm:p-5">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">同步到工具</label>
+                      <span className="text-sm font-medium">同步到工具</span>
                       {tools.length > 0 && (
                         <button
                           type="button"

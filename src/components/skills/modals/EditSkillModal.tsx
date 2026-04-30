@@ -158,10 +158,11 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
         <div className="px-6 py-5 space-y-4">
           {/* 名称 */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label htmlFor="edit-skill-name" className="block text-sm font-medium mb-2">
               技能名称
             </label>
             <input
+              id="edit-skill-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -175,10 +176,11 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
 
           {/* 来源地址 */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label htmlFor="edit-skill-source-ref" className="block text-sm font-medium mb-2">
               来源地址 <span className="font-normal text-slate-500 dark:text-slate-400">(可选)</span>
             </label>
             <textarea
+              id="edit-skill-source-ref"
               value={sourceRef}
               onChange={(e) => setSourceRef(e.target.value)}
               rows={3}
@@ -250,9 +252,9 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
             </div>
 
             <div className="max-h-64 overflow-y-auto p-4 space-y-2">
-              {gitCandidates.map((candidate, index) => (
+              {gitCandidates.map((candidate) => (
                 <button
-                  key={index}
+                  key={candidate.subpath}
                   onClick={() => handleCandidateSelect(candidate)}
                   className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                     selectedCandidate?.subpath === candidate.subpath

@@ -67,19 +67,23 @@ const NewAgentModal: React.FC<NewAgentModalProps> = ({
       .filter(([_, v]) => v)
       .map(([id]) => id);
 
-    let total = 0;
-    for (const agentId of selectedAgentIds) {
-      try {
-        const count = await invoke<number>("sync_agent_mcp", {
+    const results = await Promise.allSettled(
+      selectedAgentIds.map((agentId) =>
+        invoke<number>("sync_agent_mcp", {
           agentId,
           enabledApps,
-        });
-        total += count;
-        setSyncedCount(total);
-      } catch (e) {
-        console.error(`Failed to sync ${agentId}:`, e);
+        })
+      )
+    );
+
+    const total = results.reduce((sum, result, index) => {
+      if (result.status === "fulfilled") {
+        return sum + result.value;
       }
-    }
+      console.error(`Failed to sync ${selectedAgentIds[index]}:`, result.reason);
+      return sum;
+    }, 0);
+    setSyncedCount(total);
 
     setSyncing(false);
     onSyncComplete();

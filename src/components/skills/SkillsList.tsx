@@ -23,6 +23,24 @@ interface SkillsListProps {
   isDeleting?: boolean;
 }
 
+const sourceTypeLabel = (type: string) => {
+  switch (type) {
+    case 'git': return 'Git';
+    case 'link': return '软链接';
+    case 'local': return '本地';
+    default: return type;
+  }
+};
+
+const isGitHubUrl = (sourceRef?: string | null): boolean => {
+  if (!sourceRef) return false;
+  return sourceRef.startsWith('http://') || sourceRef.startsWith('https://');
+};
+
+const isToolSynced = (skill: ManagedSkill, toolId: string): boolean => {
+  return skill.targets.some(t => t.tool === toolId);
+};
+
 function SkillsList({
   skills,
   tools,
@@ -60,21 +78,6 @@ function SkillsList({
 
   const deleteSkill = onDeleteId ? skills.find(s => s.id === onDeleteId) : null;
 
-  const sourceTypeLabel = (type: string) => {
-    switch (type) {
-      case 'git': return 'Git';
-      case 'link': return '软链接';
-      case 'local': return '本地';
-      default: return type;
-    }
-  };
-
-  // 检查 source_ref 是否为 GitHub URL
-  const isGitHubUrl = (sourceRef?: string | null): boolean => {
-    if (!sourceRef) return false;
-    return sourceRef.startsWith('http://') || sourceRef.startsWith('https://');
-  };
-
   const handleOpenDetail = async (skill: ManagedSkill) => {
     setDetailSkill(skill);
     setReadmeContent(null);
@@ -88,11 +91,6 @@ function SkillsList({
     } finally {
       setReadmeLoading(false);
     }
-  };
-
-  // 检查某个工具是否已同步到该技能
-  const isToolSynced = (skill: ManagedSkill, toolId: string): boolean => {
-    return skill.targets.some(t => t.tool === toolId);
   };
 
   // 切换技能的同步状态

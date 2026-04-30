@@ -539,8 +539,8 @@ const AboutTab: React.FC = () => {
           <section className="glass-card p-6">
             <h3 className="text-base font-medium mb-4">核心特性</h3>
             <ul className="space-y-2.5">
-              {features.map((feature, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm">
+              {features.map((feature) => (
+                <li key={feature} className="flex items-start gap-2.5 text-sm">
                   <div className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-500" />
                   <span className="text-slate-700 dark:text-slate-200">
                     {feature}

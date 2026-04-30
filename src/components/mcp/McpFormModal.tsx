@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { X, Check, AlertCircle, ClipboardPaste, ChevronDown, ChevronUp, Play, Loader2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { useUpsertMcpServer } from "@/hooks/useMcp";
@@ -48,8 +48,11 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
   const upsertMutation = useUpsertMcpServer();
 
   // Build default apps state based on installed agents
-  const defaultApps: Record<string, boolean> = {};
-  installedAgents.forEach((a) => (defaultApps[a.id] = true));
+  const defaultApps = useMemo(() => {
+    const apps: Record<string, boolean> = {};
+    installedAgents.forEach((a) => (apps[a.id] = true));
+    return apps;
+  }, [installedAgents]);
 
   const [jsonInput, setJsonInput] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
@@ -65,20 +68,6 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  // Initialize for edit mode
-  useEffect(() => {
-    if (editingId && initialData) {
-      const editJson = {
-        mcpServers: {
-          [initialData.id]: initialData.server,
-        },
-      };
-      setJsonInput(JSON.stringify(editJson, null, 2));
-      setSelectedApps(initialData.apps || defaultApps);
-      parseAndSetServer(editJson);
-    }
-  }, [editingId, initialData]);
 
   const parseAndSetServer = useCallback((json: any) => {
     try {
@@ -114,6 +103,20 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
       setParsedServer(null);
     }
   }, []);
+
+  // Initialize for edit mode
+  useEffect(() => {
+    if (editingId && initialData) {
+      const editJson = {
+        mcpServers: {
+          [initialData.id]: initialData.server,
+        },
+      };
+      setJsonInput(JSON.stringify(editJson, null, 2));
+      setSelectedApps(initialData.apps || defaultApps);
+      parseAndSetServer(editJson);
+    }
+  }, [defaultApps, editingId, initialData, parseAndSetServer]);
 
   const handleTestConnection = async () => {
     if (!parsedServer) return;
@@ -224,7 +227,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
           {/* JSON 输入区 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-sm font-medium flex items-center gap-2">
+              <label htmlFor="mcp-config-json" className="text-sm font-medium flex items-center gap-2">
                 <ClipboardPaste size={14} />
                 MCP 配置 JSON
               </label>
@@ -239,6 +242,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
             </div>
             <div className="relative">
               <textarea
+                id="mcp-config-json"
                 value={jsonInput}
                 onChange={(e) => handleJsonChange(e.target.value)}
                 placeholder={`请从 MCP 介绍页面复制配置 JSON (如 Claude Desktop/Settings.json)，粘贴到此处...\n\n支持格式:\n{ "mcpServers": { "server-id": { "command": "...", "args": [] } } }\n或\n{ "server-id": { "command": "...", "args": [] } }`}
@@ -270,7 +274,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
             {showExample && (
               <div className="glass-code rounded-xl p-3">
                 <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-                  // 示例:
+                  {"// 示例:"}
                 </p>
                 <pre className="overflow-x-auto text-xs font-mono">
                   {EXAMPLE_JSON}
@@ -344,7 +348,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
           {/* 集成到工具 */}
           <div className="glass-card space-y-3 p-3 sm:p-5">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">集成到工具</label>
+              <span className="text-sm font-medium">集成到工具</span>
               {installedAgents.length > 0 && (
                 <button
                   type="button"

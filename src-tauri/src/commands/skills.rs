@@ -29,7 +29,12 @@ use tauri::State;
 /// cannot delete (DeleteFile API fails on directories) and `remove_dir_all`
 /// would recursively delete the *target* contents instead of just the link.
 fn safe_remove(path: &Path) -> std::io::Result<()> {
-    if path.is_dir() {
+    let metadata = std::fs::symlink_metadata(path)?;
+    if metadata.file_type().is_symlink() {
+        return std::fs::remove_file(path);
+    }
+
+    if metadata.is_dir() {
         #[cfg(windows)]
         {
             // On Windows, junction / directory symlink must be removed with rmdir
@@ -675,26 +680,34 @@ pub async fn import_existing_skill(
 }
 
 #[tauri::command]
-pub async fn delete_managed_skill(_skill_id: String, skill_name: String) -> Result<(), String> {
+pub async fn delete_managed_skill(
+    state: State<'_, AppState>,
+    skill_id: String,
+    skill_name: String,
+) -> Result<(), String> {
     // skill_id 格式: {tool_id}-{skill_name}
     // 我们需要找到这个技能在各个工具中的路径并删除
 
     // 首先获取所有技能，找到匹配的
     let all_tools = default_tool_adapters();
     let mut paths_to_delete: Vec<(PathBuf, bool)> = Vec::new(); // (path, is_link)
+    let mut seen_paths = std::collections::HashSet::new();
 
     for tool in &all_tools {
+        let skills_dir = resolve_default_path(tool).map_err(|e| e.to_string())?;
         let installed = is_tool_installed(tool);
-        if !installed {
+        if !installed && !skills_dir.exists() {
             continue;
         }
 
-        let skills_dir = resolve_default_path(tool).map_err(|e| e.to_string())?;
         let skills = scan_tool_dir(tool, &skills_dir).map_err(|e| e.to_string())?;
 
         for skill in skills {
             if skill.name == skill_name {
-                paths_to_delete.push((skill.path.clone(), skill.is_link));
+                let path_key = skill.path.to_string_lossy().to_string();
+                if seen_paths.insert(path_key) {
+                    paths_to_delete.push((skill.path.clone(), skill.is_link));
+                }
             }
         }
     }
@@ -702,23 +715,20 @@ pub async fn delete_managed_skill(_skill_id: String, skill_name: String) -> Resu
     // 删除所有找到的路径
     let count = paths_to_delete.len();
     for (path, is_link) in paths_to_delete {
-        if path.exists() {
-            if is_link {
-                if let Err(e) = safe_remove(&path) {
-                    eprintln!(
-                        "Warning: failed to remove symlink {}: {}",
-                        path.display(),
-                        e
-                    );
-                }
+        if path.exists() || path.symlink_metadata().is_ok() {
+            let result = if is_link {
+                safe_remove(&path)
             } else {
-                if let Err(e) = std::fs::remove_dir_all(&path) {
-                    eprintln!(
-                        "Warning: failed to remove directory {}: {}",
-                        path.display(),
-                        e
-                    );
-                }
+                std::fs::remove_dir_all(&path)
+            };
+
+            if let Err(e) = result {
+                return Err(format!(
+                    "Failed to remove skill '{}' at {}: {}",
+                    skill_name,
+                    path.display(),
+                    e
+                ));
             }
         }
     }
@@ -727,15 +737,23 @@ pub async fn delete_managed_skill(_skill_id: String, skill_name: String) -> Resu
     let central_dir = resolve_central_repo_path().map_err(|e| e.to_string())?;
     let central_skill_path = central_dir.join(&skill_name);
     if central_skill_path.exists() {
-        if let Err(e) = std::fs::remove_dir_all(&central_skill_path) {
-            eprintln!(
-                "Warning: failed to remove central skill directory {}: {}",
+        std::fs::remove_dir_all(&central_skill_path).map_err(|e| {
+            format!(
+                "Failed to remove central skill directory {}: {}",
                 central_skill_path.display(),
                 e
-            );
-        } else {
-            println!("已删除 central repo 中的技能: {:?}", central_skill_path);
-        }
+            )
+        })?;
+        println!("已删除 central repo 中的技能: {:?}", central_skill_path);
+    }
+
+    if !skill_id.is_empty() {
+        state.db.delete_skill(&skill_id).map_err(|e| {
+            format!(
+                "Skill files were removed, but failed to delete database record '{}': {}",
+                skill_id, e
+            )
+        })?;
     }
 
     println!("技能 '{}' 已删除 (共 {} 个工具路径)", skill_name, count);
@@ -762,31 +780,39 @@ pub async fn unsync_skill_from_tool(skill_name: String, tool: String) -> Result<
         let skills_dir = resolve_default_path(&tool_adapter).map_err(|e| e.to_string())?;
         let skills = scan_tool_dir(&tool_adapter, &skills_dir).map_err(|e| e.to_string())?;
 
+        let mut removed = false;
+
         for skill in skills {
             if skill.name == skill_name {
                 let path = &skill.path;
-                if path.exists() {
-                    if skill.is_link {
-                        if let Err(e) = safe_remove(path) {
-                            eprintln!(
-                                "Warning: failed to remove symlink {}: {}",
-                                path.display(),
-                                e
-                            );
-                        }
+                if path.exists() || path.symlink_metadata().is_ok() {
+                    let result = if skill.is_link {
+                        safe_remove(path)
                     } else {
-                        if let Err(e) = std::fs::remove_dir_all(path) {
-                            eprintln!(
-                                "Warning: failed to remove directory {}: {}",
-                                path.display(),
-                                e
-                            );
-                        }
+                        std::fs::remove_dir_all(path)
+                    };
+
+                    if let Err(e) = result {
+                        return Err(format!(
+                            "Failed to remove skill '{}' from {} at {}: {}",
+                            skill_name,
+                            tool,
+                            path.display(),
+                            e
+                        ));
                     }
                     println!("已从 {} 移除技能: {}", tool, skill_name);
+                    removed = true;
                 }
                 break;
             }
+        }
+
+        if !removed {
+            return Err(format!(
+                "Skill '{}' was not found in {} skills directory",
+                skill_name, tool
+            ));
         }
 
         Ok(())

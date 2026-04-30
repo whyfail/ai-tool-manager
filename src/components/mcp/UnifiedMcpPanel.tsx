@@ -205,7 +205,8 @@ const UnifiedMcpPanel: React.FC = () => {
           {installedAgents.length > 0 && (
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {installedAgents.map((agent) => (
-                <div
+                <button
+                  type="button"
                   key={agent.id}
                   className="flex items-center gap-1.5 group cursor-pointer"
                   onClick={() => handleOpenConfig(agent.id)}
@@ -224,7 +225,7 @@ const UnifiedMcpPanel: React.FC = () => {
                     size={10}
                     className="text-slate-400 opacity-0 transition-opacity group-hover:opacity-100"
                   />
-                </div>
+                </button>
               ))}
             </div>
           )}

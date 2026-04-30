@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-1.5.3-blue.svg)](https://github.com)
+[![Version](https://img.shields.io/badge/version-1.5.4-blue.svg)](https://github.com)
 [![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-lightgrey.svg)](https://github.com)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
 
@@ -37,6 +37,7 @@ AI Toolkit is a **universal AI programming tools management tool** that supports
 - Visual interface, goodbye manual editing of JSON/TOML files
 - Automatic recognition of multiple configuration file paths
 - **Atomic Writing**: Temporary file + rename mechanism to prevent configuration corruption
+- **Code Quality Checks**: Added `pnpm lint` / `pnpm check` powered by Oxlint and TypeScript
 
 ### 🚀 Quick Agent Launch
 - **One-Click Launch**: Start AI tools directly from a terminal

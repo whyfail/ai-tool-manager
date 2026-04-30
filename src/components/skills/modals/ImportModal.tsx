@@ -55,11 +55,12 @@ function ImportModal({ open, onClose, plan, tools, syncTargets, onSkillAdded }: 
     setLoading(true);
     setError(null);
     try {
-      let importedCount = 0;
-      for (const group of plan.groups) {
-        if (!selected[group.name]) continue;
+      const selectedGroups = plan.groups.filter((group) => selected[group.name]);
+      const selectedTools = tools.filter(tool => syncTargets[tool.id]);
+
+      const results = await Promise.all(selectedGroups.map(async (group) => {
         const chosenPath = variantChoice[group.name] ?? group.variants[0]?.path;
-        if (!chosenPath) continue;
+        if (!chosenPath) return null;
 
         // Import the skill
         const installResult = await invoke<{
@@ -72,17 +73,17 @@ function ImportModal({ open, onClose, plan, tools, syncTargets, onSkillAdded }: 
         });
 
         // Sync to selected tools
-        const selectedTools = tools.filter(tool => syncTargets[tool.id]);
-        for (const tool of selectedTools) {
-          await invoke('sync_skill_to_tool', {
+        await Promise.all(selectedTools.map(tool => invoke('sync_skill_to_tool', {
             skillId: installResult.id,
             skillName: installResult.name,
             tool: tool.id,
             sourcePath: installResult.central_path,
-          });
-        }
-        importedCount++;
-      }
+          })));
+
+        return installResult;
+      }));
+
+      const importedCount = results.filter(Boolean).length;
 
       if (importedCount > 0) {
         toast.success(`成功导入 ${importedCount} 个技能`);
@@ -143,7 +144,7 @@ function ImportModal({ open, onClose, plan, tools, syncTargets, onSkillAdded }: 
                 <div key={group.name} className="glass-card overflow-hidden">
                   {/* 技能组头部 */}
                   <div className="flex items-center justify-between px-3 py-3 transition-colors hover:bg-white/35 dark:hover:bg-white/8 sm:px-4">
-                    <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                    <label aria-label={`选择导入 ${group.name}`} className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
                       <input
                         type="checkbox"
                         checked={selected[group.name] || false}
@@ -164,7 +165,7 @@ function ImportModal({ open, onClose, plan, tools, syncTargets, onSkillAdded }: 
                   {selected[group.name] && (
                     <div className="space-y-2 border-t border-white/50 bg-white/25 px-3 py-3 dark:border-white/10 dark:bg-white/5 sm:px-4">
                       {group.variants.map((variant) => (
-                        <label key={variant.path} className="flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-white/55 dark:hover:bg-white/10">
+                        <label key={variant.path} aria-label={`选择 ${variant.tool} 来源`} className="flex cursor-pointer items-center gap-3 rounded-xl p-2 transition-colors hover:bg-white/55 dark:hover:bg-white/10">
                           <input
                             type="radio"
                             name={`variant-${group.name}`}

@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { toolApi } from "@/lib/api";
 import { useInstalledTools } from "@/contexts/InstalledToolsContext";
 import { getToolMeta, isLaunchable } from "@/lib/tools";
-import { open } from "@tauri-apps/plugin-shell";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Loader2, Download, RefreshCw, ExternalLink, CheckCircle, AlertCircle, Play, Trash2, BookOpen, Package } from "lucide-react";
 
 const glassSurface =
@@ -17,10 +17,11 @@ const primaryButton =
 const secondaryButton =
   "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/65 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 hover:text-slate-950 disabled:translate-y-0 disabled:opacity-50 dark:border-white/10 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/12";
 
+const parseVersion = (v: string) => v.replace(/[^0-9.]/g, '').split('.').map(n => parseInt(n, 10) || 0);
+
 function compareVersions(current: string, latest: string): boolean {
-  const parse = (v: string) => v.replace(/[^0-9.]/g, '').split('.').map(n => parseInt(n, 10) || 0);
-  const currentParts = parse(current);
-  const latestParts = parse(latest);
+  const currentParts = parseVersion(current);
+  const latestParts = parseVersion(latest);
   const len = Math.max(currentParts.length, latestParts.length);
   for (let i = 0; i < len; i++) {
     const a = currentParts[i] || 0;
@@ -51,13 +52,17 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={onCancel}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <button
+        type="button"
+        aria-label="关闭确认弹窗"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onCancel}
+      />
       <div
-        className="glass-modal mx-4 w-full max-w-sm overflow-hidden rounded-2xl p-6"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        className="glass-modal relative mx-4 w-full max-w-sm overflow-hidden rounded-2xl p-6"
       >
         <h3 className="text-base font-semibold mb-2">{title}</h3>
         <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
@@ -192,7 +197,7 @@ const ToolCard: React.FC<{
             </button>
           )}
           <button
-            onClick={() => open(tool.homepage).catch(console.error)}
+            onClick={() => openUrl(tool.homepage).catch(console.error)}
             className={iconButton}
             title="访问官网"
           >
@@ -202,7 +207,7 @@ const ToolCard: React.FC<{
           </button>
           {docsUrl && (
             <button
-              onClick={() => open(docsUrl).catch(console.error)}
+              onClick={() => openUrl(docsUrl).catch(console.error)}
               className={iconButton}
               title="使用文档"
             >
@@ -257,7 +262,7 @@ const ToolCard: React.FC<{
               </>
             ) : (
               <button
-                onClick={() => open(tool.homepage).catch(console.error)}
+                onClick={() => openUrl(tool.homepage).catch(console.error)}
                 className={primaryButton}
               >
                 <ExternalLink size={12} />
@@ -275,7 +280,7 @@ const ToolCard: React.FC<{
               if (singleDownloadOnly) {
                 return (
                   <button
-                    onClick={() => open(downloadMethod!.url || tool.homepage).catch(console.error)}
+                    onClick={() => openUrl(downloadMethod!.url || tool.homepage).catch(console.error)}
                     className={primaryButton}
                   >
                     <ExternalLink size={12} />
@@ -577,7 +582,7 @@ const ToolManagerPanel: React.FC = () => {
         </div>
         <div className="relative flex-1 overflow-y-auto px-8 py-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[...Array(6)].map((_, i) => (
+            {Array.from({ length: 6 }, (_, i) => i).map((i) => (
               <div
                 key={i}
                 className={`animate-pulse rounded-2xl p-5 ${glassSurface}`}

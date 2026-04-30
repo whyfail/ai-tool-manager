@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { toast } from "sonner";
@@ -137,21 +137,34 @@ export function InstalledToolsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 便捷访问
-  const installedAgents = report?.agents.filter((a) => a.exists) || [];
-  const toolStatuses = report?.tool_statuses || [];
+  const installedAgents = useMemo(
+    () => report?.agents.filter((a) => a.exists) || [],
+    [report]
+  );
+  const toolStatuses = useMemo(() => report?.tool_statuses || [], [report]);
+  const contextValue = useMemo(
+    () => ({
+      report,
+      isLoading,
+      refresh,
+      markAgentUninstalled,
+      markAgentInstalled,
+      installedAgents,
+      toolStatuses,
+    }),
+    [
+      report,
+      isLoading,
+      refresh,
+      markAgentUninstalled,
+      markAgentInstalled,
+      installedAgents,
+      toolStatuses,
+    ]
+  );
 
   return (
-    <InstalledToolsContext.Provider
-      value={{
-        report,
-        isLoading,
-        refresh,
-        markAgentUninstalled,
-        markAgentInstalled,
-        installedAgents,
-        toolStatuses,
-      }}
-    >
+    <InstalledToolsContext.Provider value={contextValue}>
       {children}
     </InstalledToolsContext.Provider>
   );

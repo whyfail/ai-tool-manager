@@ -56,26 +56,33 @@ function BatchSyncModal({
     }
 
     setSyncing(true);
-    let successCount = 0;
-    let failCount = 0;
 
     try {
-      for (const skill of selectedSkillsList) {
-        for (const toolId of selectedTools) {
-          try {
-            await invoke('sync_skill_to_tool', {
+      const tasks = selectedSkillsList.flatMap((skill) =>
+        Array.from(selectedTools).map((toolId) => ({
+          skill,
+          toolId,
+          promise: invoke('sync_skill_to_tool', {
               skillId: skill.id,
               skillName: skill.name,
               tool: toolId,
               sourcePath: skill.central_path,
-            });
-            successCount++;
-          } catch (err) {
-            console.error(`Failed to sync ${skill.name} to ${toolId}:`, err);
-            failCount++;
-          }
+          }),
+        }))
+      );
+
+      const results = await Promise.allSettled(tasks.map((task) => task.promise));
+      let successCount = 0;
+      let failCount = 0;
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          successCount++;
+        } else {
+          const task = tasks[index];
+          console.error(`Failed to sync ${task.skill.name} to ${task.toolId}:`, result.reason);
+          failCount++;
         }
-      }
+      });
 
       if (failCount === 0) {
         toast.success(`成功同步 ${successCount} 个技能到 ${selectedTools.size} 个工具`);

@@ -50,11 +50,11 @@ function GitPickModal({ open, candidates, selected, loading, onToggle, onConfirm
             </div>
           ) : candidates.length > 0 ? (
             <div className="space-y-2">
-              {candidates.map((candidate, index) => {
+              {candidates.map((candidate) => {
                 const checked = isSelected(candidate);
                 return (
                   <button
-                    key={index}
+                    key={candidate.subpath}
                     onClick={() => onToggle(candidate)}
                     className={`group flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-all ${
                       checked
