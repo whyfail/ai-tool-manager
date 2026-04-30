@@ -222,7 +222,56 @@ pub fn which_binary(binary: &str) -> Option<String> {
             .next()
             .map(|s| s.to_string())
     } else {
-        None
+        let pathext = [".exe", ".cmd", ".bat", ".ps1", ""];
+        let mut dirs = Vec::new();
+        if let Some(path) = std::env::var_os("PATH") {
+            dirs.extend(std::env::split_paths(&path));
+        }
+
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            dirs.push(std::path::PathBuf::from(appdata).join("npm"));
+        }
+        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+            dirs.push(std::path::PathBuf::from(&local_appdata).join("pnpm"));
+            dirs.push(
+                std::path::PathBuf::from(&local_appdata)
+                    .join("Yarn")
+                    .join("bin"),
+            );
+            dirs.push(
+                std::path::PathBuf::from(&local_appdata)
+                    .join("Microsoft")
+                    .join("WindowsApps"),
+            );
+        }
+        if let Ok(user_profile) = std::env::var("USERPROFILE") {
+            dirs.push(
+                std::path::PathBuf::from(&user_profile)
+                    .join(".cargo")
+                    .join("bin"),
+            );
+            dirs.push(
+                std::path::PathBuf::from(&user_profile)
+                    .join(".bun")
+                    .join("bin"),
+            );
+            dirs.push(
+                std::path::PathBuf::from(&user_profile)
+                    .join("scoop")
+                    .join("shims"),
+            );
+        }
+
+        dirs.into_iter().find_map(|dir| {
+            pathext.iter().find_map(|ext| {
+                let candidate = dir.join(format!("{}{}", binary, ext));
+                if candidate.exists() {
+                    Some(candidate.to_string_lossy().to_string())
+                } else {
+                    None
+                }
+            })
+        })
     }
 }
 
@@ -299,6 +348,15 @@ pub fn which_binary(binary: &str) -> Option<String> {
         format!("{}/.brew/bin/{}", home, binary),
         format!("/opt/homebrew/bin/{}", binary),
         format!("/usr/local/bin/{}", binary),
+        // common user-level package managers and shims
+        format!("{}/.local/bin/{}", home, binary),
+        format!("{}/.cargo/bin/{}", home, binary),
+        format!("{}/.bun/bin/{}", home, binary),
+        format!("{}/Library/pnpm/{}", home, binary),
+        format!("{}/.pnpm-global/bin/{}", home, binary),
+        format!("{}/.yarn/bin/{}", home, binary),
+        format!("{}/.asdf/shims/{}", home, binary),
+        format!("{}/.local/share/mise/shims/{}", home, binary),
         // fnm
         format!("{}/.fnm/versions/node-default/bin/{}", home, binary),
         // volta

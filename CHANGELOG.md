@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.2 (2026-04-30)
+
+### 修复
+
+- **生产环境 CLI 检测**：修复 macOS 生产包从 Finder/Dock 启动时无法继承终端 PATH，导致本地已安装 CLI 工具扫描不出来的问题
+- **工具路径兜底搜索**：增强 macOS/Linux/Windows 下的 CLI 路径查找，覆盖 nvm、mise、asdf、bun、pnpm、npm、cargo、scoop、WindowsApps 等常见安装位置
+
 ## v1.5.1 (2026-04-30)
 
 ### 文档

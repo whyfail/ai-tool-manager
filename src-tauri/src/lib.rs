@@ -19,33 +19,80 @@ use std::time::Duration;
 use tauri::{async_runtime::spawn, Emitter, Manager};
 use tool_detection::detect_all_tools;
 
+#[cfg(not(windows))]
+fn push_path_parts(parts: &mut Vec<String>, path: &str) {
+    for part in path.split(':') {
+        let part = part.trim();
+        if !part.is_empty() && !parts.iter().any(|existing| existing == part) {
+            parts.push(part.to_string());
+        }
+    }
+}
+
+#[cfg(windows)]
+fn expand_path_from_shell() {}
+
 /// 从用户的 shell 环境中获取完整 PATH 并扩展到当前进程环境中。
 /// 解决 macOS .app 进程 PATH 不完整的问题（缺少 Homebrew/nvm 等路径）。
+#[cfg(not(windows))]
 fn expand_path_from_shell() {
     let current_path = std::env::var("PATH").unwrap_or_default();
-    // 如果当前 PATH 已经包含 homebrew 路径，说明是从终端启动的，不需要扩展
-    if current_path.contains("/opt/homebrew/bin") || current_path.contains("/usr/local/bin") {
-        return;
-    }
+    let mut paths = Vec::new();
+    push_path_parts(&mut paths, &current_path);
 
-    // 尝试从 login shell 获取完整 PATH
+    // GUI 启动的 .app 不会继承用户 shell 的 PATH。login shell 覆盖
+    // .zprofile/.profile，interactive login shell 额外覆盖 .zshrc 里的
+    // nvm/mise/asdf/bun/pnpm 等初始化。
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-    if let Ok(output) = std::process::Command::new(&shell)
-        .args(["-l", "-c", "echo $PATH"])
-        .output()
-    {
-        if output.status.success() {
-            let shell_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !shell_path.is_empty() {
-                let new_path = if current_path.is_empty() {
-                    shell_path
-                } else {
-                    format!("{}:{}", shell_path, current_path)
-                };
-                std::env::set_var("PATH", &new_path);
+    for mode in ["-lc", "-lic"] {
+        if let Ok(output) = std::process::Command::new(&shell)
+            .args([mode, "printf '\\n__AI_TOOLKIT_PATH__%s\\n' \"$PATH\""])
+            .output()
+        {
+            if output.status.success() {
+                let shell_path = String::from_utf8_lossy(&output.stdout);
+                if let Some(path_line) = shell_path
+                    .lines()
+                    .rev()
+                    .find_map(|line| line.strip_prefix("__AI_TOOLKIT_PATH__"))
+                {
+                    push_path_parts(&mut paths, path_line);
+                }
             }
         }
     }
+
+    if let Ok(home) = std::env::var("HOME") {
+        for path in [
+            format!("{}/.local/bin", home),
+            format!("{}/.cargo/bin", home),
+            format!("{}/.volta/bin", home),
+            format!("{}/.bun/bin", home),
+            format!("{}/Library/pnpm", home),
+            format!("{}/.pnpm-global/bin", home),
+            format!("{}/.yarn/bin", home),
+            format!("{}/.asdf/shims", home),
+            format!("{}/.local/share/mise/shims", home),
+            format!("{}/.nvmd/bin", home),
+        ] {
+            push_path_parts(&mut paths, &path);
+        }
+    }
+
+    for path in [
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/bin",
+        "/usr/local/sbin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+    ] {
+        push_path_parts(&mut paths, path);
+    }
+
+    std::env::set_var("PATH", paths.join(":"));
 }
 
 pub fn run() {
