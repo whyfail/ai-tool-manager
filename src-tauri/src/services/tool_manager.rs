@@ -323,6 +323,16 @@ fn is_nvmd_shim(path: &str, binary: &str) -> bool {
 }
 
 #[cfg(not(windows))]
+fn is_working_binary(path: &str) -> bool {
+    std::process::Command::new(path)
+        .suppress_console()
+        .arg("--version")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(windows))]
 pub fn which_binary(binary: &str) -> Option<String> {
     // First try system which
     let output = std::process::Command::new("sh")
@@ -334,9 +344,12 @@ pub fn which_binary(binary: &str) -> Option<String> {
         let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if !path.is_empty() {
             if is_nvmd_shim(&path, binary) {
-                return None;
+                if is_working_binary(&path) {
+                    return Some(path);
+                }
+            } else {
+                return Some(path);
             }
-            return Some(path);
         }
     }
 
@@ -395,7 +408,9 @@ pub fn which_binary(binary: &str) -> Option<String> {
     // nvmd fallback: also check ~/.nvmd/bin/ (shim directory)
     // This is checked last because shims persist even after package uninstall
     let nvmd_shim = format!("{}/bin/{}", nvmd_dir, binary);
-    if std::path::Path::new(&nvmd_shim).exists() && !is_nvmd_shim(&nvmd_shim, binary) {
+    if std::path::Path::new(&nvmd_shim).exists()
+        && (!is_nvmd_shim(&nvmd_shim, binary) || is_working_binary(&nvmd_shim))
+    {
         return Some(nvmd_shim);
     }
 

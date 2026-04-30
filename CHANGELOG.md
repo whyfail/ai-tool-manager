@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.3 (2026-04-30)
+
+### 修复
+
+- **nvmd CLI 检测回归**：修复 `~/.nvmd/bin/*` shim 被误判为残留文件，导致生产环境中 Claude Code、Codex、OpenCode、Qwen Code、CodeBuddy 等本地已安装 CLI 显示为未安装的问题
+- **残留 shim 判断**：nvmd shim 现在会先执行 `--version` 验证，只有不可执行时才继续按残留 shim 处理
+
 ## v1.5.2 (2026-04-30)
 
 ### 修复
