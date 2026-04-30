@@ -67,10 +67,9 @@ pub async fn get_tool_info(app_type: String) -> Result<ToolInfo, String> {
     if info.installed {
         info.version = ToolManagerService::get_version(&app).await;
         info.latest_version = ToolManagerService::get_latest_version(&app).await;
-        info.detected_method =
-            ToolManagerService::detect_install_method(&app)
-                .await
-                .map(|m| m.display_name().to_string());
+        info.detected_method = ToolManagerService::detect_install_method(&app)
+            .await
+            .map(|m| m.display_name().to_string());
     }
     Ok(info)
 }

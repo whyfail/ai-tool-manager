@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Plus, RefreshCw, Search, Folder, Upload } from 'lucide-react';
+import { Plus, RefreshCw, Search, Folder, Upload, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import SkillsList from './SkillsList';
 import AddSkillModal from './modals/AddSkillModal';
@@ -169,15 +169,19 @@ function SkillsPanel() {
   }, [deleteSkillId, managedSkills, loadManagedSkills]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="glass-app flex h-full flex-col overflow-hidden">
       {/* 头部 */}
-      <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-5 border-b border-[hsl(var(--border))] flex-shrink-0">
+      <div className="glass-header flex-shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-5">
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">
+            <div className="glass-kicker">
+              <Sparkles size={13} />
+              Skills
+            </div>
+            <h2 className="mt-3 truncate text-2xl font-semibold tracking-tight sm:text-3xl">
               Skills 管理
             </h2>
-            <p className="text-xs sm:text-sm text-[hsl(var(--muted-foreground))] mt-1">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
               统一管理和同步技能到多个 AI 编程工具
             </p>
           </div>
@@ -185,21 +189,21 @@ function SkillsPanel() {
             <button
               onClick={handleRefresh}
               disabled={isLoading || toolsLoading}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[hsl(var(--secondary))] hover:brightness-[0.95] active:brightness-[0.9] text-[hsl(var(--secondary-foreground))] rounded-lg text-sm font-medium transition-all border border-[hsl(var(--border))] disabled:opacity-50"
+              className="glass-secondary-button"
             >
               <RefreshCw size={16} className={(isLoading || toolsLoading) ? "animate-spin" : ""} />
               <span className="hidden sm:inline">刷新</span>
             </button>
             <button
               onClick={handleReviewImport}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[hsl(var(--secondary))] hover:brightness-[0.95] active:brightness-[0.9] text-[hsl(var(--secondary-foreground))] rounded-lg text-sm font-medium transition-all border border-[hsl(var(--border))]"
+              className="glass-secondary-button"
             >
               <Folder size={16} />
               <span className="hidden sm:inline">导入</span>
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[hsl(var(--primary))] hover:brightness-[0.9] active:brightness-[0.85] text-white rounded-lg text-sm font-medium transition-all shadow-sm"
+              className="glass-primary-button"
             >
               <Plus size={16} />
               <span className="hidden sm:inline">添加技能</span>
@@ -211,33 +215,33 @@ function SkillsPanel() {
         <div className="relative mb-3 sm:mb-4">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
           <input
             type="text"
             placeholder="搜索技能..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+            className="glass-input w-full px-4 py-2 pl-10 text-sm sm:py-2.5"
           />
         </div>
 
         {/* 统计栏 */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span className="font-medium text-[hsl(var(--muted-foreground))]">
+          <span className="glass-pill">
             总计: {managedSkills.length}
           </span>
           {selectedSkills.size > 0 && (
             <button
               onClick={handleBatchSync}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-[hsl(var(--primary))] text-white rounded-md hover:brightness-[0.9] transition-all text-xs font-medium"
+              className="glass-primary-button min-h-7 px-2 py-1 text-xs"
             >
               <Upload size={12} />
               <span>批量同步到工具</span>
             </button>
           )}
           {tools.filter(t => syncTargets[t.id]).length > 0 && (
-            <span className="text-[hsl(var(--muted-foreground))]">
+            <span className="glass-pill">
               已同步到: {tools.filter(t => syncTargets[t.id]).length} 个工具
             </span>
           )}
@@ -245,10 +249,10 @@ function SkillsPanel() {
       </div>
 
       {/* 技能列表 */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-8 py-4 sm:py-5">
+      <div className="glass-content px-3 sm:px-8">
         {isLoading || toolsLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-[hsl(var(--muted-foreground))]">加载中...</div>
+            <div className="glass-pill">加载中...</div>
           </div>
         ) : (
           <SkillsList

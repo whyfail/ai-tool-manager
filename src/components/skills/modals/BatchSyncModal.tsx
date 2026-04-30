@@ -97,29 +97,29 @@ function BatchSyncModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-[hsl(var(--card))] rounded-2xl w-full max-w-3xl shadow-2xl border border-[hsl(var(--border))] overflow-hidden">
+      <div className="glass-modal w-full max-w-3xl overflow-hidden rounded-2xl">
         {/* 头部 */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[hsl(var(--border))]">
+        <div className="flex items-center justify-between border-b border-white/50 px-6 py-5 dark:border-white/10">
           <div>
             <h3 className="text-lg font-semibold">批量同步技能</h3>
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               将 {selectedSkills.size} 个技能同步到目标工具
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+            className="glass-icon-button"
           >
-            <X size={18} className="text-[hsl(var(--muted-foreground))]" />
+            <X size={18} />
           </button>
         </div>
 
         {/* 已选技能 */}
-        <div className="px-6 py-4 border-b border-[hsl(var(--border))]">
+        <div className="border-b border-white/50 px-6 py-4 dark:border-white/10">
           <div className="flex items-center gap-2 mb-3">
             <button
               onClick={toggleAllTools}
-              className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+              className="flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
             >
               {someToolsSelected ? (
                 <CheckSquare size={16} className="text-[hsl(var(--primary))]" />
@@ -135,7 +135,7 @@ function BatchSyncModal({
             {selectedSkillsList.map(skill => (
               <span
                 key={skill.id}
-                className="px-2 py-1 bg-[hsl(var(--primary))/10] text-[hsl(var(--primary))] rounded-md text-xs font-medium"
+                className="glass-pill"
               >
                 {skill.name}
               </span>
@@ -145,7 +145,7 @@ function BatchSyncModal({
 
         {/* 工具列表 */}
         <div className="px-6 py-4 max-h-64 overflow-y-auto">
-          <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] mb-3">
+          <p className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400">
             选择目标工具 ({selectedTools.size}/{tools.length})
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -155,10 +155,10 @@ function BatchSyncModal({
                 <button
                   key={tool.id}
                   onClick={() => toggleTool(tool.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
                     isSelected
-                      ? 'bg-[hsl(var(--primary))/10] text-[hsl(var(--primary))] border border-[hsl(var(--primary))]/30'
-                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] border border-transparent'
+                      ? 'border-blue-200/70 bg-blue-500/10 text-blue-700 dark:border-sky-300/20 dark:text-sky-300'
+                      : 'border-white/55 bg-white/50 text-slate-500 hover:text-slate-950 dark:border-white/10 dark:bg-white/8 dark:text-slate-400 dark:hover:text-white'
                   }`}
                 >
                   {isSelected ? (
@@ -181,17 +181,17 @@ function BatchSyncModal({
         </div>
 
         {/* 底部 */}
-        <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t border-white/50 bg-white/25 px-6 py-4 dark:border-white/10 dark:bg-white/5">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-[hsl(var(--secondary-foreground))] transition-all border border-[hsl(var(--border))]"
+            className="glass-secondary-button"
           >
             取消
           </button>
           <button
             onClick={handleSync}
             disabled={syncing || selectedTools.size === 0}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--primary))] hover:brightness-[0.9] text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="glass-primary-button"
           >
             <Upload size={14} />
             {syncing ? '同步中...' : '开始同步'}

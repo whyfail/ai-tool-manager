@@ -25,6 +25,7 @@ export interface ToolMeta {
   skillsDir: string;       // skills 目录（用于同步）
   detectDir: string;       // 检测目录（用于判断是否安装）
   binaryName: string;      // CLI 命令名
+  docsUrl: string;         // 使用文档链接
 }
 
 // 所有支持的工具列表
@@ -36,6 +37,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.qwen/skills',
     detectDir: '.qwen',
     binaryName: 'qwen',
+    docsUrl: 'https://qwenlm.github.io/qwen-code-docs/en/',
   },
   {
     id: 'claude',
@@ -44,6 +46,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.claude/skills',
     detectDir: '.claude',
     binaryName: 'claude',
+    docsUrl: 'https://code.claude.com/docs',
   },
   {
     id: 'codex',
@@ -52,6 +55,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.codex/skills',
     detectDir: '.codex',
     binaryName: 'codex',
+    docsUrl: 'https://github.com/openai/codex',
   },
   {
     id: 'gemini',
@@ -60,6 +64,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.gemini/skills',
     detectDir: '.gemini',
     binaryName: 'gemini',
+    docsUrl: 'https://github.com/google-gemini/gemini-cli/tree/main/docs',
   },
   {
     id: 'opencode',
@@ -68,6 +73,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.config/opencode/skills',
     detectDir: '.config/opencode',
     binaryName: 'opencode',
+    docsUrl: 'https://opencode.ai/docs',
   },
   {
     id: 'qoder',
@@ -76,6 +82,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.qoder/skills',
     detectDir: '.qoder',
     binaryName: 'qoder',
+    docsUrl: 'https://docs.qoder.com/qoderwork/introduction',
   },
   {
     id: 'qodercli',
@@ -84,6 +91,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.qoder/skills',
     detectDir: '.qoder',
     binaryName: 'qodercli',
+    docsUrl: 'https://docs.qoder.com/extensions/skills',
   },
   {
     id: 'trae',
@@ -92,6 +100,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.trae/skills',
     detectDir: '.trae',
     binaryName: 'trae',
+    docsUrl: 'https://docs.trae.ai/ide',
   },
   {
     id: 'trae-cn',
@@ -100,6 +109,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.trae-cn/skills',
     detectDir: '.trae-cn',
     binaryName: 'trae',
+    docsUrl: 'https://docs.trae.cn/ide',
   },
   {
     id: 'trae-solo-cn',
@@ -108,6 +118,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.trae-cn/skills',
     detectDir: '.trae-cn',
     binaryName: 'trae',
+    docsUrl: 'https://docs.trae.cn/ide',
   },
   {
     id: 'codebuddy',
@@ -116,6 +127,7 @@ export const SUPPORTED_TOOLS: ToolMeta[] = [
     skillsDir: '.codebuddy/skills',
     detectDir: '.codebuddy',
     binaryName: 'codebuddy',
+    docsUrl: 'https://www.codebuddy.ai/docs/cli/cli-reference',
   },
 ];
 

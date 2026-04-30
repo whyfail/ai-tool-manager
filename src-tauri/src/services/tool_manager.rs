@@ -252,8 +252,7 @@ fn is_nvmd_shim(path: &str, binary: &str) -> bool {
     }
 
     // Case 2: hard copy with same size as nvmd binary
-    if let (Ok(shim_meta), Ok(nvmd_meta)) =
-        (std::fs::metadata(path), std::fs::metadata(&nvmd_main))
+    if let (Ok(shim_meta), Ok(nvmd_meta)) = (std::fs::metadata(path), std::fs::metadata(&nvmd_main))
     {
         if shim_meta.len() == nvmd_meta.len() && shim_meta.len() > 1024 {
             // Verify no real binary exists in any nvmd version directory
@@ -563,17 +562,17 @@ impl ToolManagerService {
 
         #[cfg(windows)]
         {
-            // Check Winget locations
-            let winget_paths = [
-                std::env::var("LOCALAPPDATA").ok(),
-                std::env::var("ProgramFiles").ok(),
-                std::env::var("UserProfile").ok(),
-            ];
-            for base in winget_paths.into_iter().flatten() {
-                let _winget_dir = std::path::PathBuf::from(&base);
-                for path in ["Microsoft\\WindowsApps", "winget", "Programs"] {
-                    if binary_path_str.contains(path) {
-                        return Some(InstallMethodType::Winget);
+            // Prefer npm detection before WindowsApps/Winget. npm shims and aliases can
+            // otherwise be mistaken for Winget, which makes updates call the wrong tool.
+            let install_info = app.get_install_info()?;
+            if let Some(method) = install_info
+                .methods
+                .iter()
+                .find(|m| matches!(m, InstallMethod::Npm { .. }))
+            {
+                if let InstallMethod::Npm { package } = method {
+                    if npm_list_global(package).unwrap_or(false) {
+                        return Some(InstallMethodType::Npm);
                     }
                 }
             }
@@ -586,11 +585,27 @@ impl ToolManagerService {
                 }
             }
 
-            // Check npm on Windows
+            // Check npm on Windows by install prefix as a secondary signal.
             if let Some(npm_prefix) = get_npm_global_prefix() {
                 let npm_prefix_path = std::path::Path::new(&npm_prefix);
                 if binary_path_str.starts_with(npm_prefix_path.to_str().unwrap_or("")) {
                     return Some(InstallMethodType::Npm);
+                }
+            }
+
+            // Check Winget locations last. This is only a fallback because Winget
+            // output can include Microsoft Store source errors unrelated to npm tools.
+            let winget_paths = [
+                std::env::var("LOCALAPPDATA").ok(),
+                std::env::var("ProgramFiles").ok(),
+                std::env::var("UserProfile").ok(),
+            ];
+            for base in winget_paths.into_iter().flatten() {
+                let _winget_dir = std::path::PathBuf::from(&base);
+                for path in ["Microsoft\\WindowsApps", "winget", "Programs"] {
+                    if binary_path_str.contains(path) {
+                        return Some(InstallMethodType::Winget);
+                    }
                 }
             }
         }
@@ -844,6 +859,13 @@ impl ToolManagerService {
             }
             #[cfg(windows)]
             Some(InstallMethodType::Winget) => {
+                if !install_info.update_cmd.is_empty() {
+                    let mut cmd = std::process::Command::new("cmd");
+                    cmd.suppress_console()
+                        .args(["/C", &install_info.update_cmd]);
+                    return Self::execute_command_windows(&mut cmd).await;
+                }
+
                 let package = install_info
                     .methods
                     .iter()
@@ -854,8 +876,16 @@ impl ToolManagerService {
                     })
                     .unwrap_or_else(|| app.name().to_lowercase());
                 let mut cmd = std::process::Command::new("winget");
-                cmd.suppress_console()
-                    .args(["upgrade", "--id", &package, "-e"]);
+                cmd.suppress_console().args([
+                    "upgrade",
+                    "--id",
+                    &package,
+                    "-e",
+                    "--source",
+                    "winget",
+                    "--accept-package-agreements",
+                    "--accept-source-agreements",
+                ]);
                 Self::execute_command_windows(&mut cmd).await
             }
             #[cfg(windows)]
@@ -1030,7 +1060,10 @@ impl ToolManagerService {
                 #[cfg(not(windows))]
                 {
                     let mut cmd = tokio::process::Command::new("npm");
-                    cmd.suppress_console().arg("uninstall").arg("-g").arg(&package);
+                    cmd.suppress_console()
+                        .arg("uninstall")
+                        .arg("-g")
+                        .arg(&package);
                     Self::execute_command(&mut cmd).await
                 }
             }
@@ -1103,8 +1136,8 @@ impl ToolManagerService {
         if output.status.success() {
             Ok(())
         } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = sanitize_windows_command_output(&String::from_utf8_lossy(&output.stderr));
+            let stdout = sanitize_windows_command_output(&String::from_utf8_lossy(&output.stdout));
             if stderr.is_empty() {
                 Err(format!("命令执行失败: {}", stdout))
             } else {
@@ -1112,6 +1145,86 @@ impl ToolManagerService {
             }
         }
     }
+}
+
+#[cfg(windows)]
+fn sanitize_windows_command_output(output: &str) -> String {
+    let without_ansi = strip_ansi_sequences(output);
+    let normalized = without_ansi
+        .replace('\r', "\n")
+        .chars()
+        .filter(|c| !c.is_control() || matches!(*c, '\n' | '\t'))
+        .collect::<String>();
+
+    let lines = normalized
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .filter(|line| !is_progress_noise_line(line))
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+
+    if lines.is_empty() {
+        return "命令执行失败，请在终端中重试查看详细错误".into();
+    }
+
+    lines.join("\n")
+}
+
+#[cfg(windows)]
+fn strip_ansi_sequences(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            if chars.peek() == Some(&'[') {
+                chars.next();
+                for next in chars.by_ref() {
+                    if ('@'..='~').contains(&next) {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+        result.push(ch);
+    }
+
+    result
+}
+
+#[cfg(windows)]
+fn is_progress_noise_line(line: &str) -> bool {
+    let compact = line.trim();
+    if compact.is_empty() {
+        return true;
+    }
+
+    let progress_chars = ['-', '\\', '|', '/', '█', '▒', '░', '▓', '▌', '═'];
+    let without_progress = compact
+        .chars()
+        .filter(|c| !progress_chars.contains(c) && !c.is_whitespace())
+        .collect::<String>();
+
+    if without_progress.is_empty() {
+        return true;
+    }
+
+    if without_progress.ends_with('%')
+        && without_progress
+            .trim_end_matches('%')
+            .chars()
+            .all(|c| c.is_ascii_digit())
+    {
+        return true;
+    }
+
+    let ascii_noise = compact
+        .chars()
+        .filter(|c| progress_chars.contains(c) || c.is_whitespace())
+        .count();
+    ascii_noise > compact.chars().count().saturating_mul(2) / 3
 }
 
 pub async fn build_tool_info(app: &AppType) -> Option<crate::commands::tool_manager::ToolInfo> {

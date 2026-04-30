@@ -8,9 +8,6 @@ import {
   Database,
   Settings,
   Info,
-  Moon,
-  Sun,
-  Monitor,
   ArrowUpCircle,
   CheckCircle,
   Loader2,
@@ -18,45 +15,99 @@ import {
   ExternalLink,
   Package,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { appApi } from "@/lib/api";
 import type { AppConfigInfo, LaunchPreferences } from "@/types";
+import appLogo from "../src-tauri/icons/128x128.png";
 
 type Tab = "mcp" | "skills" | "tools" | "settings" | "about";
-type Theme = "light" | "dark" | "system";
+const GITHUB_REPO_URL = "https://github.com/whyfail/ai-toolkit";
+let startupUpdateCheckStarted = false;
+
+const copyText = async (text: string) => {
+  try {
+    await navigator.clipboard?.writeText(text);
+    return;
+  } catch {
+    // Fall through to the textarea fallback below.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+};
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("tools");
-  const [theme, setTheme] = useState<Theme>("system");
+  const [startupUpdateInfo, setStartupUpdateInfo] = useState<{
+    version: string;
+    body: string;
+  } | null>(null);
+  const [showStartupUpdateModal, setShowStartupUpdateModal] = useState(false);
+  const [startupInstalling, setStartupInstalling] = useState(false);
   const appVersion = useAppVersion();
 
-  // 应用主题
+  // 固定浅色主题。
   useEffect(() => {
-    const root = document.documentElement;
-    
-    if (theme === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      root.classList.toggle("dark", prefersDark);
-    } else {
-      root.classList.toggle("dark", theme === "dark");
-    }
-  }, [theme]);
+    document.documentElement.classList.remove("dark");
+  }, []);
 
-  // 监听系统主题变化
+  // 首次打开应用时自动检查新版本，有更新时交给用户决定是否安装。
   useEffect(() => {
-    if (theme !== "system") return;
-    
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      document.documentElement.classList.toggle("dark", mediaQuery.matches);
+    if (startupUpdateCheckStarted) return;
+    startupUpdateCheckStarted = true;
+
+    let cancelled = false;
+
+    const checkStartupUpdate = async () => {
+      try {
+        const result = await invoke<{
+          available: boolean;
+          version: string;
+          body: string | null;
+        }>("check_update");
+
+        if (!cancelled && result.available) {
+          setStartupUpdateInfo({
+            version: result.version,
+            body: result.body || "",
+          });
+          setShowStartupUpdateModal(true);
+        }
+      } catch (err) {
+        console.error("启动时检查更新失败:", err);
+      }
     };
-    
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, [theme]);
+
+    checkStartupUpdate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const installStartupUpdate = async () => {
+    setStartupInstalling(true);
+    try {
+      await invoke("install_update");
+      toast.success("更新下载完成，正在重启应用...");
+    } catch (err) {
+      console.error("安装更新失败:", err);
+      toast.error(`安装更新失败: ${err}`);
+    } finally {
+      setStartupInstalling(false);
+    }
+  };
 
   const navItems = [
     { id: "tools" as Tab, label: "工具管理", icon: Package },
@@ -67,20 +118,24 @@ function App() {
   ];
 
   return (
-    <div className="flex h-full bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
+    <div className="glass-app flex h-full">
       {/* 侧边栏 */}
-      <aside className="w-[260px] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col">
+      <aside className="glass-sidebar z-10 flex w-[260px] flex-col border-y-0 border-l-0">
         {/* Logo */}
         <div className="px-6 pt-6 pb-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[hsl(var(--primary))] flex items-center justify-center shadow-lg shadow-[hsl(var(--primary)/0.2)]">
-              <Database size={18} className="text-white" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/70 shadow-lg shadow-blue-500/15 backdrop-blur-xl">
+              <img
+                src={appLogo}
+                alt="AI Toolkit"
+                className="h-8 w-8 rounded-xl"
+              />
             </div>
             <div>
-              <h1 className="text-base font-semibold tracking-tight">
+              <h1 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white">
                 AI Toolkit
               </h1>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 AI 编程工具管理
               </p>
             </div>
@@ -93,10 +148,10 @@ function App() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
                 activeTab === item.id
-                  ? "bg-[hsl(var(--primary))] text-white shadow-md shadow-[hsl(var(--primary)/0.15)]"
-                  : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+                  ? "bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-500/20"
+                  : "text-slate-500 hover:bg-white/60 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
               }`}
             >
               <item.icon size={18} />
@@ -105,37 +160,9 @@ function App() {
           ))}
         </nav>
 
-        {/* 主题切换 */}
-        <div className="px-3 py-4 border-t border-[hsl(var(--border))]">
-          <div className="flex items-center gap-1 bg-[hsl(var(--muted))] rounded-lg p-1">
-            {(["light", "dark", "system"] as Theme[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTheme(t)}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  theme === t
-                    ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm"
-                    : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                }`}
-              >
-                {t === "light" && <Sun size={12} />}
-                {t === "dark" && <Moon size={12} />}
-                {t === "system" && <Monitor size={12} />}
-                <span className="hidden sm:inline">
-                  {t === "light"
-                    ? "浅色"
-                    : t === "dark"
-                    ? "深色"
-                    : "系统"}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* 版本 */}
-        <div className="px-6 py-4 text-center">
-          <p className="text-xs text-[hsl(var(--muted-foreground))]">v{appVersion}</p>
+        <div className="border-t border-white/50 px-6 py-4 text-center">
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500">v{appVersion}</p>
         </div>
       </aside>
 
@@ -150,6 +177,15 @@ function App() {
 
       {/* Toast 通知 */}
       <Toaster position="top-right" richColors closeButton />
+
+      <UpdateModal
+        open={showStartupUpdateModal}
+        onClose={() => setShowStartupUpdateModal(false)}
+        version={startupUpdateInfo?.version || ""}
+        body={startupUpdateInfo?.body || ""}
+        onInstall={installStartupUpdate}
+        installing={startupInstalling}
+      />
     </div>
   );
 }
@@ -172,6 +208,16 @@ const SettingsTab: React.FC = () => {
   const isMac = navigator.userAgent.includes("Mac");
   const dbPath = isWindows ? "%USERPROFILE%\\.ai-toolkit\\ai-toolkit.db" : "~/.ai-toolkit/ai-toolkit.db";
   const skillsPath = isWindows ? "%USERPROFILE%\\.ai-toolkit\\skills\\" : "~/.ai-toolkit/skills/";
+
+  const copyRepoUrl = async () => {
+    try {
+      await copyText(GITHUB_REPO_URL);
+      toast.success("GitHub 仓库地址已复制");
+    } catch (err) {
+      console.error("复制仓库地址失败:", err);
+      toast.error("复制失败，请稍后重试");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -287,27 +333,34 @@ const SettingsTab: React.FC = () => {
     }
   };
 
+  const settingSections = "glass-card p-6";
+  const codeBlock = "glass-code block mt-1 rounded-xl px-3 py-2 text-sm font-mono";
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="glass-app flex h-full flex-col overflow-hidden">
       {/* 头部 */}
-      <div className="px-8 pt-8 pb-6 border-b border-[hsl(var(--border))]">
-        <h2 className="text-2xl font-semibold tracking-tight">设置</h2>
-        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+      <div className="glass-header">
+        <div className="glass-kicker">
+          <Settings size={13} />
+          Preferences
+        </div>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight">设置</h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           管理应用配置和数据存储
         </p>
       </div>
 
       {/* 内容 */}
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="glass-content">
         <div className="max-w-2xl space-y-6">
           {/* 检查更新 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className={settingSections}>
             <h3 className="text-base font-medium mb-4">软件更新</h3>
             <div className="flex items-center gap-4">
               <button
                 onClick={checkUpdate}
                 disabled={checking}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+                className="glass-primary-button"
               >
                 {checking ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -323,28 +376,45 @@ const SettingsTab: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-3">
+            <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
               当前版本 v{appVersion} · 更新源：GitHub Releases
             </p>
           </section>
 
+          {/* 分享 */}
+          <section className={settingSections}>
+            <h3 className="text-base font-medium mb-4">分享应用</h3>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={copyRepoUrl}
+                className="glass-primary-button"
+              >
+                <Share2 size={16} />
+                复制 GitHub 地址
+              </button>
+              <code className="glass-code min-w-0 flex-1 truncate rounded-xl px-3 py-2 text-xs font-mono text-slate-500 dark:text-slate-400">
+                {GITHUB_REPO_URL}
+              </code>
+            </div>
+          </section>
+
           {/* 数据库 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className={settingSections}>
             <h3 className="text-base font-medium mb-4">数据存储</h3>
             <div className="space-y-3">
               <div>
-                <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                   数据库路径
                 </p>
-                <code className="block mt-1 px-3 py-2 bg-[hsl(var(--muted))] rounded-lg text-sm font-mono">
+                <code className={codeBlock}>
                   {dbPath}
                 </code>
               </div>
               <div>
-                <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                   Skills 列表路径
                 </p>
-                <code className="block mt-1 px-3 py-2 bg-[hsl(var(--muted))] rounded-lg text-sm font-mono">
+                <code className={codeBlock}>
                   {skillsPath}
                 </code>
               </div>
@@ -352,14 +422,14 @@ const SettingsTab: React.FC = () => {
           </section>
 
           {(isMac || isWindows) && launchPreferences && launchPreferences.availableTerminals.length > 0 && (
-            <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+            <section className={settingSections}>
               <h3 className="text-base font-medium mb-4">默认启动终端</h3>
               <div className="space-y-3">
                 <select
                   value={launchPreferences.defaultTerminal}
                   onChange={(e) => handleTerminalChange(e.target.value)}
                   disabled={savingTerminal}
-                  className="w-full rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2.5 text-sm outline-none focus:border-[hsl(var(--primary))] disabled:opacity-60"
+                  className="glass-select w-full px-3 py-2.5 text-sm disabled:opacity-60"
                 >
                   {launchPreferences.availableTerminals.map((terminal) => (
                     <option
@@ -371,7 +441,7 @@ const SettingsTab: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {isMac
                     ? "启动 CLI 工具时优先使用这个终端。目前支持 Terminal、iTerm、Warp 和 Ghostty。"
                     : "启动 CLI 工具时优先使用这个终端。目前支持 Windows Terminal、PowerShell 和 Command Prompt。"}
@@ -381,13 +451,13 @@ const SettingsTab: React.FC = () => {
           )}
 
           {/* 支持的应用 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className={settingSections}>
             <h3 className="text-base font-medium mb-4">支持的应用</h3>
             <div className="space-y-2">
               {apps.map((app) => (
                 <div
                   key={app.id}
-                  className="flex items-center py-2.5 px-3 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
+                  className="flex items-center rounded-xl px-3 py-2.5 transition-colors hover:bg-white/60 dark:hover:bg-white/10"
                 >
                   <span className="text-sm font-medium">{app.name}</span>
                 </div>
@@ -423,51 +493,55 @@ const AboutTab: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="glass-app flex h-full flex-col overflow-hidden">
       {/* 头部 */}
-      <div className="px-8 pt-8 pb-6 border-b border-[hsl(var(--border))]">
-        <h2 className="text-2xl font-semibold tracking-tight">关于</h2>
-        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+      <div className="glass-header">
+        <div className="glass-kicker">
+          <Info size={13} />
+          About
+        </div>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight">关于</h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
           了解 AI Toolkit 的更多信息
         </p>
       </div>
 
       {/* 内容 */}
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="glass-content">
         <div className="max-w-2xl space-y-6">
           {/* 项目信息 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className="glass-card p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-base font-medium">AI Toolkit</h3>
-                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   v{appVersion}· MCP 和 Skills 管理工具
                 </p>
               </div>
               <button
                 onClick={() =>
-                  open("https://github.com/whyfail/ai-toolkit")
+                  open(GITHUB_REPO_URL)
                 }
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[hsl(var(--border))] text-xs font-medium hover:bg-[hsl(var(--muted))] transition-colors"
+                className="glass-secondary-button min-h-8 px-3 py-1.5 text-xs"
               >
                 <Github size={12} />
                 GitHub
-                <ExternalLink size={10} className="text-[hsl(var(--muted-foreground))]" />
+                <ExternalLink size={10} />
               </button>
             </div>
-            <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
+            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
               一款基于 Tauri 2 构建的跨平台桌面应用，专注于管理 AI 编程工具的 MCP 服务器配置和 Skills 技能同步。兼容 Qwen Code、Claude Code、Codex、Gemini CLI、OpenCode、Trae、Trae CN、Qoder、CodeBuddy 等主流工具。
             </p>
           </section>
 
           {/* 核心特性 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className="glass-card p-6">
             <h3 className="text-base font-medium mb-4">核心特性</h3>
             <ul className="space-y-2.5">
               {features.map((feature, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--primary))] mt-1.5 flex-shrink-0" />
-                  <span className="text-[hsl(var(--foreground))]">
+                  <div className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-500" />
+                  <span className="text-slate-700 dark:text-slate-200">
                     {feature}
                   </span>
                 </li>
@@ -476,7 +550,7 @@ const AboutTab: React.FC = () => {
           </section>
 
           {/* 技术栈 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className="glass-card p-6">
             <h3 className="text-base font-medium mb-4">技术栈</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -488,7 +562,7 @@ const AboutTab: React.FC = () => {
                     (tech) => (
                       <span
                         key={tech}
-                        className="px-2.5 py-1 bg-[hsl(var(--muted))] rounded-md text-xs font-medium"
+                        className="glass-pill"
                       >
                         {tech}
                       </span>
@@ -504,7 +578,7 @@ const AboutTab: React.FC = () => {
                   {["Tauri 2", "Rust", "SQLite"].map((tech) => (
                     <span
                       key={tech}
-                      className="px-2.5 py-1 bg-[hsl(var(--muted))] rounded-md text-xs font-medium"
+                    className="glass-pill"
                     >
                       {tech}
                     </span>
@@ -515,14 +589,14 @@ const AboutTab: React.FC = () => {
           </section>
 
           {/* 支持与反馈 */}
-          <section className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6">
+          <section className="glass-card p-6">
             <h3 className="text-base font-medium mb-3">支持与反馈</h3>
-            <div className="space-y-2 text-sm text-[hsl(var(--muted-foreground))]">
+            <div className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
               <p>
                 如有问题或建议，欢迎在{" "}
                 <button
                   onClick={() =>
-                    open("https://github.com/whyfail/ai-toolkit/issues")
+                    open(`${GITHUB_REPO_URL}/issues`)
                   }
                   className="text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-0.5"
                 >

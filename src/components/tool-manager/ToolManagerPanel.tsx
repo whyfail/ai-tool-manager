@@ -4,9 +4,18 @@ import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
 import { toolApi } from "@/lib/api";
 import { useInstalledTools } from "@/contexts/InstalledToolsContext";
-import { isLaunchable } from "@/lib/tools";
+import { getToolMeta, isLaunchable } from "@/lib/tools";
 import { open } from "@tauri-apps/plugin-shell";
-import { Loader2, Download, RefreshCw, ExternalLink, CheckCircle, AlertCircle, Play, Trash2 } from "lucide-react";
+import { Loader2, Download, RefreshCw, ExternalLink, CheckCircle, AlertCircle, Play, Trash2, BookOpen, Package } from "lucide-react";
+
+const glassSurface =
+  "border border-white/60 bg-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/55 dark:shadow-[0_18px_60px_rgba(0,0,0,0.35)]";
+const iconButton =
+  "flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-slate-500 transition-all duration-200 hover:border-white/70 hover:bg-white/70 hover:text-slate-950 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]/40 dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/10 dark:hover:text-white";
+const primaryButton =
+  "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(37,99,235,0.28)] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none";
+const secondaryButton =
+  "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/65 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/85 hover:text-slate-950 disabled:translate-y-0 disabled:opacity-50 dark:border-white/10 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/12";
 
 function compareVersions(current: string, latest: string): boolean {
   const parse = (v: string) => v.replace(/[^0-9.]/g, '').split('.').map(n => parseInt(n, 10) || 0);
@@ -47,7 +56,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-sm mx-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl overflow-hidden p-6"
+        className="glass-modal mx-4 w-full max-w-sm overflow-hidden rounded-2xl p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold mb-2">{title}</h3>
@@ -57,13 +66,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 rounded-lg border border-[hsl(var(--border))] text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
+            className="glass-secondary-button flex-1"
           >
             取消
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+            className="glass-primary-button flex-1"
           >
             {confirmText}
           </button>
@@ -103,49 +112,51 @@ const ToolCard: React.FC<{
 }> = ({ tool, onInstall, onUpdate, onScan, onLaunch, onDelete, installing, updating, scanning, deleting }) => {
   const [showMethods, setShowMethods] = useState(false);
   const hasUpdate = tool.installed && tool.version && tool.latest_version && compareVersions(tool.version, tool.latest_version);
+  const docsUrl = getToolMeta(tool.app_type)?.docsUrl;
 
   return (
-    <div className="relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 overflow-hidden">
+    <div className={`group relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-white/80 hover:shadow-[0_24px_70px_rgba(15,23,42,0.13)] dark:hover:border-white/20 ${glassSurface}`}>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/25" />
       {updating && (
-        <div className="absolute inset-0 bg-[hsl(var(--card))]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
-          <Loader2 size={24} className="animate-spin text-[hsl(var(--primary))]" />
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/75 backdrop-blur-xl dark:bg-slate-950/70">
+          <Loader2 size={24} className="animate-spin text-blue-600 dark:text-sky-400" />
           <div className="text-center">
             <p className="text-sm font-medium">更新中...</p>
-            <p className="text-xs text-[hsl(var(--muted-foreground))]">请稍候</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">请稍候</p>
           </div>
         </div>
       )}
       {deleting && (
-        <div className="absolute inset-0 bg-[hsl(var(--card))]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/75 backdrop-blur-xl dark:bg-slate-950/70">
           <Loader2 size={24} className="animate-spin text-red-500" />
           <div className="text-center">
             <p className="text-sm font-medium">卸载中...</p>
-            <p className="text-xs text-[hsl(var(--muted-foreground))]">请稍候</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">请稍候</p>
           </div>
         </div>
       )}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            className={`flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm transition-colors ${
               tool.installed
-                ? "bg-emerald-500/10"
-                : "bg-[hsl(var(--muted))]"
+                ? "border-emerald-200/70 bg-emerald-400/15 text-emerald-600 dark:border-emerald-300/20 dark:bg-emerald-400/10 dark:text-emerald-300"
+                : "border-white/70 bg-white/70 text-slate-500 dark:border-white/10 dark:bg-white/8 dark:text-slate-400"
             }`}
           >
             {tool.installed ? (
-              <CheckCircle size={20} className="text-emerald-500" />
+              <CheckCircle size={21} />
             ) : (
-              <Download size={20} className="text-[hsl(var(--muted-foreground))]" />
+              <Download size={21} />
             )}
           </div>
           <div>
-            <h4 className="text-sm font-semibold">{tool.name}</h4>
-            <p className="text-xs text-[hsl(var(--muted-foreground))]">
+            <h4 className="text-sm font-semibold text-slate-950 dark:text-white">{tool.name}</h4>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {tool.installed ? (
                 <span className="flex items-center gap-1.5 flex-wrap">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                  <span className="rounded-full border border-emerald-200/70 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-300/20 dark:text-emerald-300">
                     {tool.detected_method || tool.methods[0]?.name || "CLI"}
                   </span>
                   <span>{tool.version || ""}</span>
@@ -156,7 +167,7 @@ const ToolCard: React.FC<{
                     </span>
                   )}
                   {!hasUpdate && tool.latest_version && (
-                    <span className="text-[hsl(var(--muted-foreground))]">({tool.latest_version})</span>
+                    <span className="text-slate-400 dark:text-slate-500">({tool.latest_version})</span>
                   )}
                 </span>
               ) : (
@@ -172,25 +183,34 @@ const ToolCard: React.FC<{
           {tool.installed && tool.detected_method && tool.detected_method !== "下载安装" && (
             <button
               onClick={onDelete}
-              className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+              className={`${iconButton} hover:text-red-500`}
               title="卸载工具"
             >
               <Trash2
                 size={14}
-                className="text-[hsl(var(--muted-foreground))] hover:text-red-500"
               />
             </button>
           )}
           <button
             onClick={() => open(tool.homepage).catch(console.error)}
-            className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
+            className={iconButton}
             title="访问官网"
           >
             <ExternalLink
               size={14}
-              className="text-[hsl(var(--muted-foreground))]"
             />
           </button>
+          {docsUrl && (
+            <button
+              onClick={() => open(docsUrl).catch(console.error)}
+              className={iconButton}
+              title="使用文档"
+            >
+              <BookOpen
+                size={14}
+              />
+            </button>
+          )}
         </div>
       </div>
 
@@ -203,7 +223,7 @@ const ToolCard: React.FC<{
                 {isLaunchable(tool.app_type) && (
                   <button
                     onClick={onLaunch}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-lg hover:opacity-90 transition-all text-xs font-medium"
+                    className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(16,185,129,0.28)]"
                     title="启动工具"
                   >
                     <Play size={14} />
@@ -213,19 +233,19 @@ const ToolCard: React.FC<{
                 <button
                   onClick={onScan}
                   disabled={scanning || updating}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-all text-xs font-medium"
+                  className={secondaryButton}
                   title="扫描版本"
                 >
                   <RefreshCw
                     size={14}
-                    className={`text-white ${scanning ? 'animate-spin' : ''}`}
+                    className={scanning ? 'animate-spin' : ''}
                   />
                   {scanning ? "扫描中..." : "扫描"}
                 </button>
                 <button
                   onClick={onUpdate}
                   disabled={updating}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-all text-xs font-medium"
+                  className={primaryButton}
                 >
                   {updating ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -238,7 +258,7 @@ const ToolCard: React.FC<{
             ) : (
               <button
                 onClick={() => open(tool.homepage).catch(console.error)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 transition-all text-xs font-medium"
+                className={primaryButton}
               >
                 <ExternalLink size={12} />
                 访问官网
@@ -256,7 +276,7 @@ const ToolCard: React.FC<{
                 return (
                   <button
                     onClick={() => open(downloadMethod!.url || tool.homepage).catch(console.error)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 transition-all text-xs font-medium"
+                    className={primaryButton}
                   >
                     <ExternalLink size={12} />
                     下载安装
@@ -269,7 +289,7 @@ const ToolCard: React.FC<{
                   <button
                     onClick={() => onInstall(npmMethod.index, npmMethod.needs_confirm, npmMethod.command)}
                     disabled={installing}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-all text-xs font-medium"
+                    className={primaryButton}
                   >
                     {installing ? (
                       <Loader2 size={12} className="animate-spin" />
@@ -285,7 +305,7 @@ const ToolCard: React.FC<{
                 <button
                   onClick={() => setShowMethods(!showMethods)}
                   disabled={installing}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-all text-xs font-medium"
+                  className={primaryButton}
                 >
                   {installing ? (
                     <Loader2 size={12} className="animate-spin" />
@@ -301,8 +321,8 @@ const ToolCard: React.FC<{
       </div>
 
       {showMethods && !tool.installed && (
-        <div className="mt-3 pt-3 border-t border-[hsl(var(--border))] space-y-2">
-          <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">
+        <div className="mt-4 space-y-2 border-t border-white/60 pt-4 dark:border-white/10">
+          <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
             选择安装方式:
           </p>
           {tool.methods.map((method) => (
@@ -312,10 +332,10 @@ const ToolCard: React.FC<{
                 onInstall(method.index, method.needs_confirm, method.command)
               }
               disabled={installing}
-              className="w-full flex items-center justify-between px-3 py-2 bg-[hsl(var(--muted))] rounded-lg hover:bg-[hsl(var(--muted))]/80 disabled:opacity-50 transition-colors text-xs"
+              className="flex min-h-10 w-full items-center justify-between rounded-xl border border-white/60 bg-white/60 px-3 py-2 text-xs transition-all hover:bg-white/85 disabled:opacity-50 dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12"
             >
               <span className="font-medium">{method.name}</span>
-              <code className="text-[hsl(var(--muted-foreground))] text-[10px] truncate max-w-[180px]">
+              <code className="max-w-[180px] truncate text-[10px] text-slate-500 dark:text-slate-400">
                 {method.command}
               </code>
             </button>
@@ -335,7 +355,7 @@ const ToolManagerPanel: React.FC = () => {
     confirmText: string;
     onConfirm: () => void;
   } | null>(null);
-  const [updatingTool, setUpdatingTool] = useState<string | null>(null);
+  const [updatingTools, setUpdatingTools] = useState<Set<string>>(() => new Set());
   const [installingTool, setInstallingTool] = useState<string | null>(null);
   const [scanningTool, setScanningTool] = useState<string | null>(null);
   const [deletingTool, setDeletingTool] = useState<string | null>(null);
@@ -408,7 +428,7 @@ const ToolManagerPanel: React.FC = () => {
 
   const updateMutation = useMutation({
     mutationFn: async (appType: string) => {
-      setUpdatingTool(appType);
+      setUpdatingTools((prev) => new Set(prev).add(appType));
       await toolApi.updateTool(appType);
       await new Promise(resolve => setTimeout(resolve, 2000));
       const updatedInfo = await toolApi.getToolInfo(appType);
@@ -416,7 +436,11 @@ const ToolManagerPanel: React.FC = () => {
     },
     onSuccess: (updatedInfo) => {
       toast.success("更新成功");
-      setUpdatingTool(null);
+      setUpdatingTools((prev) => {
+        const next = new Set(prev);
+        next.delete(updatedInfo.app_type);
+        return next;
+      });
       queryClient.setQueryData(["tool-infos"], (old: any) => {
         if (!old) return old;
         return old.map((tool: any) =>
@@ -424,10 +448,14 @@ const ToolManagerPanel: React.FC = () => {
         );
       });
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, appType) => {
       const message = error instanceof Error ? error.message : String(error);
       toast.error(`更新失败: ${message}`);
-      setUpdatingTool(null);
+      setUpdatingTools((prev) => {
+        const next = new Set(prev);
+        next.delete(appType);
+        return next;
+      });
     },
   });
 
@@ -516,6 +544,7 @@ const ToolManagerPanel: React.FC = () => {
   };
 
   const handleUpdate = (appType: string) => {
+    if (updatingTools.has(appType)) return;
     updateMutation.mutate(appType);
   };
 
@@ -529,44 +558,45 @@ const ToolManagerPanel: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="px-8 pt-8 pb-6 border-b border-[hsl(var(--border))]">
+      <div className="relative isolate flex h-full flex-col overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#edf4ff_45%,#f8fafc_100%)] dark:bg-[linear-gradient(135deg,#020617_0%,#0f172a_52%,#111827_100%)]">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(37,99,235,0.10),transparent_34%,rgba(16,185,129,0.10)_67%,transparent)] dark:bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_35%,rgba(16,185,129,0.09)_68%,transparent)]" />
+        <div className="relative px-8 pt-8 pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="h-9 w-40 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-              <div className="h-4 w-56 bg-[hsl(var(--muted))] rounded-md mt-2 animate-pulse flex items-center gap-2">
+              <div className="h-9 w-40 animate-pulse rounded-xl bg-white/70 dark:bg-white/10" />
+              <div className="mt-2 flex h-4 w-56 animate-pulse items-center gap-2 rounded-md bg-white/60 dark:bg-white/8">
                 <Loader2 size={14} className="animate-spin text-[hsl(var(--primary))]" />
                 <span className="text-sm text-[hsl(var(--muted-foreground))]">正在扫描中...</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-9 w-28 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-              <div className="h-9 w-9 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+              <div className="h-9 w-28 animate-pulse rounded-xl bg-white/70 dark:bg-white/10" />
+              <div className="h-9 w-9 animate-pulse rounded-xl bg-white/70 dark:bg-white/10" />
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="relative flex-1 overflow-y-auto px-8 py-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 animate-pulse"
+                className={`animate-pulse rounded-2xl p-5 ${glassSurface}`}
                 style={{ animationDelay: `${i * 100}ms` }}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[hsl(var(--muted))]" />
+                    <div className="h-11 w-11 rounded-2xl bg-white/70 dark:bg-white/10" />
                     <div>
-                      <div className="h-4 w-20 bg-[hsl(var(--muted))] rounded-md mb-1" />
-                      <div className="h-3 w-28 bg-[hsl(var(--muted))] rounded-md" />
+                      <div className="mb-1 h-4 w-20 rounded-md bg-white/70 dark:bg-white/10" />
+                      <div className="h-3 w-28 rounded-md bg-white/60 dark:bg-white/8" />
                     </div>
                   </div>
-                  <div className="w-6 h-6 bg-[hsl(var(--muted))] rounded-md" />
+                  <div className="h-9 w-9 rounded-xl bg-white/70 dark:bg-white/10" />
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-1 h-8 bg-[hsl(var(--muted))] rounded-lg" />
-                  <div className="flex-1 h-8 bg-[hsl(var(--muted))] rounded-lg" />
-                  <div className="flex-1 h-8 bg-[hsl(var(--muted))] rounded-lg" />
+                  <div className="h-10 flex-1 rounded-xl bg-white/70 dark:bg-white/10" />
+                  <div className="h-10 flex-1 rounded-xl bg-white/70 dark:bg-white/10" />
+                  <div className="h-10 flex-1 rounded-xl bg-white/70 dark:bg-white/10" />
                 </div>
               </div>
             ))}
@@ -577,12 +607,17 @@ const ToolManagerPanel: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-8 pt-8 pb-6 border-b border-[hsl(var(--border))]">
+    <div className="relative isolate flex h-full flex-col overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#edf4ff_45%,#f8fafc_100%)] text-slate-950 dark:bg-[linear-gradient(135deg,#020617_0%,#0f172a_52%,#111827_100%)] dark:text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(37,99,235,0.10),transparent_34%,rgba(16,185,129,0.10)_67%,transparent)] dark:bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_35%,rgba(16,185,129,0.09)_68%,transparent)]" />
+      <div className="relative px-8 pt-8 pb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">工具管理</h2>
-            <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/55 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/8 dark:text-sky-300">
+              <Package size={13} />
+              Agent Tools
+            </div>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight">工具管理</h2>
+            <p className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
               {isFetching ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
@@ -602,17 +637,17 @@ const ToolManagerPanel: React.FC = () => {
                 refetch();
               }}
               disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors disabled:opacity-50"
+              className={iconButton}
               title="刷新"
             >
-              <RefreshCw size={18} className={`text-[hsl(var(--muted-foreground))] ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw size={18} className={isFetching ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="relative flex-1 overflow-y-auto px-8 pb-8 pt-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {tools?.slice().sort((a, b) => a.name.localeCompare(b.name)).map((tool) => (
             <ToolCard
               key={tool.app_type}
@@ -625,7 +660,7 @@ const ToolManagerPanel: React.FC = () => {
               onLaunch={() => handleLaunch(tool.app_type)}
               onDelete={() => handleDelete(tool.app_type, tool.name)}
               installing={installingTool === tool.app_type}
-              updating={updatingTool === tool.app_type}
+              updating={updatingTools.has(tool.app_type)}
               scanning={scanningTool === tool.app_type}
               deleting={deletingTool === tool.app_type}
             />

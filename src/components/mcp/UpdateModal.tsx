@@ -26,39 +26,39 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md mx-4 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl overflow-hidden"
+        className="glass-modal mx-4 w-full max-w-md overflow-hidden rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
               <ArrowUpCircle size={20} className="text-emerald-500" />
             </div>
             <div>
               <h3 className="text-base font-semibold tracking-tight">
                 发现新版本
               </h3>
-              <p className="text-xs text-[hsl(var(--muted-foreground))]">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 v{version}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
+            className="glass-icon-button"
           >
-            <X size={16} className="text-[hsl(var(--muted-foreground))]" />
+            <X size={16} />
           </button>
         </div>
 
         {/* 更新内容 */}
         <div className="px-6 pb-4">
-          <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-4">
-            <h4 className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2">
+          <div className="glass-code rounded-xl p-4">
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               更新日志
             </h4>
-            <p className="text-sm text-[hsl(var(--foreground))] whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+            <p className="max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
               {body || "暂无更新说明"}
             </p>
           </div>
@@ -69,7 +69,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
           <button
             onClick={onInstall}
             disabled={installing}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[hsl(var(--primary))] text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+            className="glass-primary-button flex-1"
           >
             {installing ? (
               <Loader2 size={16} className="animate-spin" />
@@ -80,7 +80,7 @@ const UpdateModal: React.FC<UpdateModalProps> = ({
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2.5 rounded-lg border border-[hsl(var(--border))] text-sm font-medium hover:bg-[hsl(var(--muted))] transition-colors"
+            className="glass-secondary-button"
           >
             稍后
           </button>

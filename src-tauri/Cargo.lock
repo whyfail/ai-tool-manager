@@ -31,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "ai-toolkit"
-version = "1.3.2"
+version = "1.5.0"
 dependencies = [
  "anyhow",
  "dirs",

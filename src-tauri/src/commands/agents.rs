@@ -503,14 +503,16 @@ pub async fn launch_agent(state: State<'_, AppState>, agent_id: String) -> Resul
                 script_path
             )
         } else if terminal_app == "warp" {
-            let (warp_app, warp_scheme) = if std::path::Path::new("/Applications/Warp.app").exists() {
+            let (warp_app, warp_scheme) = if std::path::Path::new("/Applications/Warp.app").exists()
+            {
                 ("Warp", "warp")
             } else {
                 ("Warp Preview", "warppreview")
             };
             let home = dirs::home_dir().ok_or("无法获取 Home 目录")?;
             let launch_dir = home.join(".warp").join("launch_configurations");
-            fs::create_dir_all(&launch_dir).map_err(|e| format!("创建 Warp 配置目录失败: {}", e))?;
+            fs::create_dir_all(&launch_dir)
+                .map_err(|e| format!("创建 Warp 配置目录失败: {}", e))?;
             let launch_file_name = format!("ai-toolkit-{}.yaml", agent_id);
             let launch_file_path = launch_dir.join(&launch_file_name);
             let yaml_work_dir = yaml_escape_single_quoted(&work_dir);

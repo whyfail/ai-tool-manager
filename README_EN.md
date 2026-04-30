@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](https://github.com)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com)
 [![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-lightgrey.svg)](https://github.com)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-orange.svg)](https://tauri.app/)
 
@@ -46,6 +46,12 @@ AI Toolkit is a **universal AI programming tools management tool** that supports
 - **Installation Wizard**: Shows multiple installation methods (Homebrew, npm, curl scripts)
 - **Version Detection**: Auto-detect installed tool versions
 - **One-Click Update**: Quickly update installed tools
+- **Usage Docs**: Each tool card links to official documentation for quick reference
+- **Concurrent Updates**: Update multiple tools at the same time with independent progress states
+
+### 🔄 App Updates & Sharing
+- **Startup Update Check**: Automatically checks for new releases on first launch and lets users decide whether to install
+- **One-Click Sharing**: Copy the GitHub repository URL from Settings to share the app easily
 
 ## 📸 Screenshots
 

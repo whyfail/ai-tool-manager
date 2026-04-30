@@ -128,11 +128,11 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-[hsl(var(--card))] rounded-2xl w-full max-w-md shadow-2xl border border-[hsl(var(--border))] overflow-hidden">
+      <div className="glass-modal w-full max-w-md overflow-hidden rounded-2xl">
         {/* 头部 */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[hsl(var(--border))]">
+        <div className="flex items-center justify-between border-b border-white/50 px-6 py-5 dark:border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 shadow-lg shadow-blue-500/15">
               {isGitHubUrl ? (
                 <Github size={20} className="text-white" />
               ) : (
@@ -141,16 +141,16 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
             </div>
             <div>
               <h3 className="text-lg font-semibold">编辑技能</h3>
-              <p className="text-xs text-[hsl(var(--muted-foreground))]">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 修改技能名称和来源地址
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+            className="glass-icon-button"
           >
-            <X size={18} className="text-[hsl(var(--muted-foreground))]" />
+            <X size={18} />
           </button>
         </div>
 
@@ -165,10 +165,10 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2.5 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+              className="glass-input w-full px-3 py-2.5 text-sm"
               placeholder="技能名称"
             />
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1.5">
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               修改名称将同步重命名技能文件夹
             </p>
           </div>
@@ -176,33 +176,33 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
           {/* 来源地址 */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              来源地址 <span className="text-[hsl(var(--muted-foreground))] font-normal">(可选)</span>
+              来源地址 <span className="font-normal text-slate-500 dark:text-slate-400">(可选)</span>
             </label>
             <textarea
               value={sourceRef}
               onChange={(e) => setSourceRef(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all resize-y min-h-[80px]"
+              className="glass-input min-h-[80px] w-full resize-y px-3 py-2.5 text-sm"
               placeholder="Git URL 或本地路径"
             />
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1.5">
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               Git 技能的原始仓库地址
             </p>
           </div>
         </div>
 
         {/* 底部 */}
-        <div className="px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted)/30] flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t border-white/50 bg-white/25 px-6 py-4 dark:border-white/10 dark:bg-white/5">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-[hsl(var(--secondary-foreground))] transition-all border border-[hsl(var(--border))]"
+            className="glass-secondary-button"
           >
             取消
           </button>
           <button
             onClick={handleScan}
             disabled={saving || scanning}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-[hsl(var(--secondary-foreground))] transition-all border border-[hsl(var(--border))] disabled:opacity-50"
+            className="glass-secondary-button"
           >
             {scanning ? (
               <span className="flex items-center gap-2">
@@ -216,7 +216,7 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--primary))] hover:brightness-[0.9] text-white transition-all shadow-sm disabled:opacity-50"
+            className="glass-primary-button"
           >
             {saving ? (
               <span className="flex items-center gap-2">
@@ -233,19 +233,19 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
       {/* 多技能仓库选择弹窗 */}
       {showPickModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
-          <div className="bg-[hsl(var(--card))] rounded-2xl w-full max-w-md shadow-2xl border border-[hsl(var(--border))] overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[hsl(var(--border))]">
+          <div className="glass-modal w-full max-w-md overflow-hidden rounded-2xl">
+            <div className="flex items-center justify-between border-b border-white/50 px-6 py-5 dark:border-white/10">
               <div>
                 <h3 className="text-lg font-semibold">选择技能</h3>
-                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   该仓库包含 {gitCandidates.length} 个技能
                 </p>
               </div>
               <button
                 onClick={handlePickModalCancel}
-                className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                className="glass-icon-button"
               >
-                <X size={18} className="text-[hsl(var(--muted-foreground))]" />
+                <X size={18} />
               </button>
             </div>
 
@@ -254,23 +254,23 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
                 <button
                   key={index}
                   onClick={() => handleCandidateSelect(candidate)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
+                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                     selectedCandidate?.subpath === candidate.subpath
-                      ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))/10]"
-                      : "border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))]"
+                      ? "border-blue-200/70 bg-blue-500/10 dark:border-sky-300/20"
+                      : "border-white/55 bg-white/50 hover:bg-white/75 dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12"
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500">
                     <GitBranch size={14} className="text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{candidate.name}</div>
                     {candidate.description && (
-                      <div className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5 line-clamp-1">
+                      <div className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">
                         {candidate.description}
                       </div>
                     )}
-                    <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1 font-mono">
+                    <div className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">
                       {candidate.subpath}
                     </div>
                   </div>
@@ -278,17 +278,17 @@ function EditSkillModal({ open, skill, onClose, onSkillEdited }: EditSkillModalP
               ))}
             </div>
 
-            <div className="px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted)/30] flex gap-3">
+            <div className="flex gap-3 border-t border-white/50 bg-white/25 px-6 py-4 dark:border-white/10 dark:bg-white/5">
               <button
                 onClick={handlePickModalCancel}
-                className="flex-1 px-4 py-2.5 bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-[hsl(var(--secondary-foreground))] rounded-lg text-sm font-medium transition-all border border-[hsl(var(--border))]"
+                className="glass-secondary-button flex-1"
               >
                 取消
               </button>
               <button
                 onClick={handleCandidateConfirm}
                 disabled={!selectedCandidate}
-                className="flex-1 px-4 py-2.5 bg-[hsl(var(--primary))] hover:brightness-[0.9] text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                className="glass-primary-button flex-1"
               >
                 确定
               </button>

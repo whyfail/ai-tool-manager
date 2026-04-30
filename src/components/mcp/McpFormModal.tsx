@@ -195,24 +195,24 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-[hsl(var(--card))] rounded-2xl w-full max-w-3xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden shadow-2xl border border-[hsl(var(--border))] flex flex-col">
+      <div className="glass-modal flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl sm:max-h-[85vh]">
         {/* 头部 */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-[hsl(var(--border))] flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-white/50 px-4 py-4 dark:border-white/10 sm:px-6 sm:py-5">
           <div className="min-w-0">
             <h2 className="text-base sm:text-lg font-semibold truncate">
               {editingId ? "编辑服务器" : "添加 MCP 服务器"}
             </h2>
             {!editingId && (
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 粘贴 JSON 配置快速添加
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex-shrink-0"
+            className="glass-icon-button flex-shrink-0"
           >
-            <X size={18} className="text-[hsl(var(--muted-foreground))]" />
+            <X size={18} />
           </button>
         </div>
 
@@ -242,24 +242,24 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                 value={jsonInput}
                 onChange={(e) => handleJsonChange(e.target.value)}
                 placeholder={`请从 MCP 介绍页面复制配置 JSON (如 Claude Desktop/Settings.json)，粘贴到此处...\n\n支持格式:\n{ "mcpServers": { "server-id": { "command": "...", "args": [] } } }\n或\n{ "server-id": { "command": "...", "args": [] } }`}
-                className={`w-full px-3 sm:px-4 py-3 bg-[hsl(var(--muted))] border rounded-lg text-xs sm:text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all resize-y ${
+                className={`glass-input w-full resize-y px-3 py-3 font-mono text-xs leading-relaxed sm:px-4 sm:text-sm ${
                   parseError
                     ? "border-red-500/50"
                     : parsedServer
                     ? "border-green-500/50"
-                    : "border-[hsl(var(--border))]"
+                    : "border-white/60 dark:border-white/10"
                 }`}
                 rows={8}
               />
               {/* 状态提示 */}
               {parseError && (
-                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-xs text-red-500 bg-[hsl(var(--card))] px-2 py-1 rounded shadow-sm max-w-[80%] truncate">
+                <div className="absolute bottom-3 right-3 flex max-w-[80%] items-center gap-1.5 truncate rounded bg-white/80 px-2 py-1 text-xs text-red-500 shadow-sm backdrop-blur-xl dark:bg-slate-950/80">
                   <AlertCircle size={12} className="flex-shrink-0" />
                   {parseError}
                 </div>
               )}
               {parsedServer && (
-                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-xs text-green-500 bg-[hsl(var(--card))] px-2 py-1 rounded shadow-sm">
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/80 px-2 py-1 text-xs text-green-500 shadow-sm backdrop-blur-xl dark:bg-slate-950/80">
                   <Check size={12} />
                   已解析: {parsedServer.name}
                 </div>
@@ -268,11 +268,11 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
 
             {/* 示例代码 */}
             {showExample && (
-              <div className="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] p-3">
-                <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">
+              <div className="glass-code rounded-xl p-3">
+                <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
                   // 示例:
                 </p>
-                <pre className="text-xs font-mono text-[hsl(var(--foreground))] overflow-x-auto">
+                <pre className="overflow-x-auto text-xs font-mono">
                   {EXAMPLE_JSON}
                 </pre>
               </div>
@@ -281,7 +281,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
 
           {/* 解析结果预览 */}
           {parsedServer && (
-            <div className="rounded-xl border border-[hsl(var(--primary))/20 bg-[hsl(var(--primary))/5] p-3 sm:p-4 space-y-3">
+            <div className="rounded-xl border border-blue-200/70 bg-blue-500/10 p-3 dark:border-sky-300/20 sm:p-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-medium text-[hsl(var(--primary))]">
                   配置解析成功
@@ -296,7 +296,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                         ? "bg-green-500/20 text-green-500"
                         : testResult?.success === false
                         ? "bg-red-500/20 text-red-500"
-                        : "bg-[hsl(var(--card))] text-[hsl(var(--primary))] hover:brightness-[0.95] active:brightness-[0.9] border border-[hsl(var(--border))]"
+                        : "glass-secondary-button min-h-8 px-3 py-1.5 text-xs text-blue-700 dark:text-sky-300"
                     } disabled:opacity-50`}
                   >
                     {isTesting ? (
@@ -321,19 +321,19 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
-                  <span className="text-[hsl(var(--muted-foreground))]">ID</span>
+                  <span className="text-slate-500 dark:text-slate-400">ID</span>
                   <p className="font-mono text-xs mt-0.5 break-all">{parsedServer.id}</p>
                 </div>
                 <div>
-                  <span className="text-[hsl(var(--muted-foreground))]">名称</span>
+                  <span className="text-slate-500 dark:text-slate-400">名称</span>
                   <p className="text-xs mt-0.5 truncate">{parsedServer.name}</p>
                 </div>
               </div>
-              <div className="text-xs font-mono bg-[hsl(var(--card))] rounded p-3 border border-[hsl(var(--border))]">
-                <div className="flex justify-between text-[hsl(var(--muted-foreground))] mb-1">
+              <div className="glass-code rounded-xl p-3 text-xs font-mono">
+                <div className="mb-1 flex justify-between text-slate-500 dark:text-slate-400">
                   <span>命令</span>
                 </div>
-                <div className="text-[hsl(var(--foreground))] break-all">
+                <div className="break-all">
                   {parsedServer.server.command || "N/A"}{" "}
                   {parsedServer.server.args?.join(" ")}
                 </div>
@@ -342,7 +342,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
           )}
 
           {/* 集成到工具 */}
-          <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] p-3 sm:p-5 space-y-3">
+          <div className="glass-card space-y-3 p-3 sm:p-5">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">集成到工具</label>
               {installedAgents.length > 0 && (
@@ -364,17 +364,17 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                       key={agent.id}
                       type="button"
                       onClick={() => toggleApp(agent.id)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-left ${
+                      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                         enabled
-                          ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))/5]"
-                          : "border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))]"
+                          ? "border-blue-200/70 bg-blue-500/10 dark:border-sky-300/20"
+                          : "border-white/55 bg-white/50 hover:bg-white/75 dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12"
                       }`}
                     >
                       <div
                         className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
                           enabled
                             ? agentColors[agent.id]
-                            : "bg-[hsl(var(--muted))] border border-[hsl(var(--border))]"
+                            : "border border-white/50 bg-white/50 dark:border-white/10 dark:bg-white/8"
                         }`}
                       >
                         {enabled && <Check size={12} className="text-white" />}
@@ -385,7 +385,7 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
                 })}
               </div>
             ) : (
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 未检测到已安装的 AI 工具，请先安装相关工具。
               </p>
             )}
@@ -393,18 +393,18 @@ const McpFormModal: React.FC<McpFormModalProps> = ({
         </form>
 
         {/* 按钮 */}
-        <div className="flex flex-wrap justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-wrap justify-end gap-2 border-t border-white/50 bg-white/25 px-4 py-3 dark:border-white/10 dark:bg-white/5 sm:gap-3 sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 sm:px-5 py-2 sm:py-2.5 bg-[hsl(var(--secondary))] hover:brightness-[0.95] active:brightness-[0.9] text-[hsl(var(--secondary-foreground))] rounded-lg text-sm font-medium transition-all border border-[hsl(var(--border))]"
+            className="glass-secondary-button"
           >
             取消
           </button>
           <button
             onClick={handleSubmit}
             disabled={!parsedServer || isSubmitting || installedAgents.length === 0 || !!(parsedServer.server.command && !testResult?.success)}
-            className="px-4 sm:px-5 py-2 sm:py-2.5 bg-[hsl(var(--primary))] hover:brightness-[0.9] active:brightness-[0.85] text-white rounded-lg text-sm font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="glass-primary-button"
             title={parsedServer?.server.command && !testResult?.success ? "请先测试连接成功后再保存" : ""}
           >
             {isSubmitting

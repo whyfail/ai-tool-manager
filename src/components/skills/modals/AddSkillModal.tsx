@@ -365,16 +365,16 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
-        <div className="bg-[hsl(var(--card))] rounded-2xl w-full max-w-3xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden shadow-2xl border border-[hsl(var(--border))] flex flex-col">
+        <div className="glass-modal flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl sm:max-h-[85vh]">
           {/* 头部 */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-[hsl(var(--border))] flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center justify-between border-b border-white/50 px-4 py-4 dark:border-white/10 sm:px-6 sm:py-5">
             <div className="min-w-0 flex items-center gap-3">
               {activeTab === 'online' && detailSkill && (
                 <button
                   onClick={() => setDetailSkill(null)}
-                  className="p-1.5 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                  className="glass-icon-button"
                 >
-                  <ArrowLeft size={18} className="text-[hsl(var(--muted-foreground))]" />
+                  <ArrowLeft size={18} />
                 </button>
               )}
               {isGitPreviewed && (
@@ -383,16 +383,16 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                     resetGitState();
                     setError(null);
                   }}
-                  className="p-1.5 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                  className="glass-icon-button"
                 >
-                  <ArrowLeft size={18} className="text-[hsl(var(--muted-foreground))]" />
+                  <ArrowLeft size={18} />
                 </button>
               )}
               <div className="min-w-0">
                 <h2 className="text-base sm:text-lg font-semibold truncate">
                   {detailSkill ? '技能详情' : '添加技能'}
                 </h2>
-                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   {activeTab === 'online' && !detailSkill
                     ? '浏览和搜索在线技能'
                     : activeTab === 'online' && detailSkill
@@ -405,10 +405,10 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex-shrink-0"
+              className="glass-icon-button flex-shrink-0"
               disabled={loading}
             >
-              <X size={18} className="text-[hsl(var(--muted-foreground))]" />
+              <X size={18} />
             </button>
           </div>
 
@@ -424,20 +424,20 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
             {activeTab === 'online' && detailSkill ? (
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 shadow-lg shadow-blue-500/15">
                     <GitBranch size={20} className="text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base font-semibold">{detailSkill.name}</h3>
-                    <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {('source' in detailSkill ? detailSkill.source : detailSkill.source_url.replace('https://github.com/', ''))}
                     </p>
                   </div>
                 </div>
 
                 {'summary' in detailSkill && detailSkill.summary && (
-                  <div className="p-4 rounded-lg bg-[hsl(var(--muted))]">
-                    <p className="text-sm text-[hsl(var(--foreground))] leading-relaxed">
+                  <div className="glass-code rounded-xl p-4">
+                    <p className="text-sm leading-relaxed">
                       {detailSkill.summary}
                     </p>
                   </div>
@@ -452,13 +452,13 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                   )}
                   {'downloads' in detailSkill && (
                     <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-[hsl(var(--muted-foreground))]">下载:</span>
+                      <span className="text-slate-500 dark:text-slate-400">下载:</span>
                       <span>{formatCount(detailSkill.downloads)}</span>
                     </div>
                   )}
                   {'installs' in detailSkill && (
                     <div className="flex items-center gap-1.5 text-sm">
-                      <span className="text-[hsl(var(--muted-foreground))]">安装:</span>
+                      <span className="text-slate-500 dark:text-slate-400">安装:</span>
                       <span>{formatCount(detailSkill.installs)}</span>
                     </div>
                   )}
@@ -470,14 +470,14 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                       const url = 'source_url' in detailSkill ? detailSkill.source_url : '';
                       if (url) openUrl(url);
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-sm font-medium transition-all"
+                    className="glass-secondary-button flex-1"
                   >
                     <ExternalLink size={14} />
                     查看源码
                   </button>
                   <button
                     onClick={() => handleSelectFeatured(detailSkill as FeaturedSkillDto)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[hsl(var(--primary))] hover:brightness-[0.9] text-white text-sm font-medium transition-all"
+                    className="glass-primary-button flex-1"
                     disabled={loading}
                   >
                     <GitBranch size={14} />
@@ -489,13 +489,13 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
               <>
                 {/* 标签页 - 预览状态时隐藏 */}
                 {!isGitPreviewed && (
-                  <div className="flex rounded-lg bg-[hsl(var(--muted))] p-1">
+                  <div className="flex rounded-xl border border-white/60 bg-white/50 p-1 dark:border-white/10 dark:bg-white/8">
                     <button
                       onClick={() => handleTabChange('git')}
                       className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-2 ${
                         activeTab === 'git'
-                          ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm'
-                          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                          ? 'bg-white text-slate-950 shadow-sm dark:bg-white/14 dark:text-white'
+                          : 'text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white'
                       }`}
                     >
                       <GitBranch size={14} />
@@ -505,8 +505,8 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                       onClick={() => handleTabChange('local')}
                       className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-2 ${
                         activeTab === 'local'
-                          ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm'
-                          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                          ? 'bg-white text-slate-950 shadow-sm dark:bg-white/14 dark:text-white'
+                          : 'text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white'
                       }`}
                     >
                       <Folder size={14} />
@@ -516,8 +516,8 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                       onClick={() => handleTabChange('online')}
                       className={`flex-1 py-2.5 px-4 text-sm font-medium rounded-md transition-all flex items-center justify-center gap-2 ${
                         activeTab === 'online'
-                          ? 'bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-sm'
-                          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+                          ? 'bg-white text-slate-950 shadow-sm dark:bg-white/14 dark:text-white'
+                          : 'text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white'
                       }`}
                     >
                       <Globe size={14} />
@@ -546,7 +546,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                             }
                           }}
                           placeholder="例如: https://github.com/username/repo.git"
-                          className="flex-1 px-3 sm:px-4 py-3 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="glass-input flex-1 px-3 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
                           disabled={loading || gitScanLoading || gitPhase === 'previewed'}
                         />
                         {gitPhase === 'previewed' && (
@@ -555,7 +555,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                               resetGitState();
                               setError(null);
                             }}
-                            className="px-4 py-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+                            className="glass-secondary-button whitespace-nowrap"
                           >
                             <RotateCcw size={14} />
                             重选
@@ -583,13 +583,13 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                             value={gitName}
                             onChange={(e) => setGitName(e.target.value)}
                             placeholder="留空则使用仓库名称"
-                            className="w-full px-3 sm:px-4 py-3 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+                            className="glass-input w-full px-3 py-3 text-sm sm:px-4"
                             disabled={loading}
                           />
                         </div>
 
                         {/* 同步到工具 */}
-                        <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] p-3 sm:p-5 space-y-3">
+                        <div className="glass-card space-y-3 p-3 sm:p-5">
                           <div className="flex items-center justify-between">
                             <label className="text-sm font-medium">同步到工具</label>
                             {tools.length > 0 && (
@@ -611,10 +611,10 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                     key={tool.id}
                                     type="button"
                                     onClick={() => toggleTool(tool.id)}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-left ${
+                                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                                       enabled
-                                        ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))/5]"
-                                        : "border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))]"
+                                        ? "border-blue-200/70 bg-blue-500/10 dark:border-sky-300/20"
+                                        : "border-white/55 bg-white/50 hover:bg-white/75 dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12"
                                     }`}
                                     disabled={loading}
                                   >
@@ -622,7 +622,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                       className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
                                         enabled
                                           ? APP_COLORS[tool.id as keyof typeof APP_COLORS] || "bg-[hsl(var(--foreground))]"
-                                          : "bg-[hsl(var(--muted))] border border-[hsl(var(--border))]"
+                                          : "border border-white/50 bg-white/50 dark:border-white/10 dark:bg-white/8"
                                       }`}
                                     >
                                       {enabled && <Check size={12} className="text-white" />}
@@ -633,7 +633,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                               })}
                             </div>
                           ) : (
-                            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
                               未检测到已安装的 AI 工具。
                             </p>
                           )}
@@ -662,7 +662,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                           {selectedGitCandidates.map((candidate) => (
                             <div
                               key={candidate.subpath}
-                              className="p-3 rounded-lg border border-[hsl(var(--primary))]/30 bg-[hsl(var(--primary))/5] space-y-2"
+                              className="space-y-2 rounded-xl border border-blue-200/70 bg-blue-500/10 p-3 dark:border-sky-300/20"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 min-w-0">
@@ -690,7 +690,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                     }))
                                   }
                                   placeholder={candidate.name}
-                                  className="w-full px-3 py-2 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+                                className="glass-input w-full px-3 py-2 text-sm"
                                   disabled={loading}
                                 />
                               </div>
@@ -699,7 +699,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                         </div>
 
                         {/* 同步到工具 */}
-                        <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] p-3 sm:p-5 space-y-3">
+                        <div className="glass-card space-y-3 p-3 sm:p-5">
                           <div className="flex items-center justify-between">
                             <label className="text-sm font-medium">同步到工具</label>
                             {tools.length > 0 && (
@@ -721,10 +721,10 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                     key={tool.id}
                                     type="button"
                                     onClick={() => toggleTool(tool.id)}
-                                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-left ${
+                                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                                       enabled
-                                        ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))/5]"
-                                        : "border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))]"
+                                        ? "border-blue-200/70 bg-blue-500/10 dark:border-sky-300/20"
+                                        : "border-white/55 bg-white/50 hover:bg-white/75 dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12"
                                     }`}
                                     disabled={loading}
                                   >
@@ -732,7 +732,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                       className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
                                         enabled
                                           ? APP_COLORS[tool.id as keyof typeof APP_COLORS] || "bg-[hsl(var(--foreground))]"
-                                          : "bg-[hsl(var(--muted))] border border-[hsl(var(--border))]"
+                                          : "border border-white/50 bg-white/50 dark:border-white/10 dark:bg-white/8"
                                       }`}
                                     >
                                       {enabled && <Check size={12} className="text-white" />}
@@ -743,7 +743,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                               })}
                             </div>
                           ) : (
-                            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
                               未检测到已安装的 AI 工具。
                             </p>
                           )}
@@ -769,12 +769,12 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                             validateLocalPath(e.target.value);
                           }}
                           placeholder="选择或输入文件夹路径"
-                          className="flex-1 px-3 sm:px-4 py-3 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+                          className="glass-input flex-1 px-3 py-3 text-sm sm:px-4"
                           disabled={loading}
                         />
                         <button
                           onClick={handlePickLocalPath}
-                          className="px-4 py-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-sm font-medium transition-all whitespace-nowrap"
+                          className="glass-secondary-button whitespace-nowrap"
                           disabled={loading}
                         >
                           浏览
@@ -795,7 +795,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                         value={localName}
                         onChange={(e) => setLocalName(e.target.value)}
                         placeholder="留空则使用文件夹名称"
-                        className="w-full px-3 sm:px-4 py-3 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+                        className="glass-input w-full px-3 py-3 text-sm sm:px-4"
                         disabled={loading}
                       />
                     </div>
@@ -816,12 +816,12 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                           onChange={(e) => setOnlineQuery(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSearchOnline()}
                           placeholder="输入技能名称或关键词搜索"
-                          className="flex-1 px-3 sm:px-4 py-3 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all"
+                          className="glass-input flex-1 px-3 py-3 text-sm sm:px-4"
                           disabled={searchLoading}
                         />
                         <button
                           onClick={handleSearchOnline}
-                          className="px-4 py-3 rounded-lg bg-[hsl(var(--primary))] hover:brightness-[0.9] text-white text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+                          className="glass-primary-button whitespace-nowrap"
                           disabled={searchLoading}
                         >
                           {searchLoading ? (
@@ -856,9 +856,9 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                               <button
                                 key={skill.slug}
                                 onClick={() => setDetailSkill(skill)}
-                                className="flex items-center gap-3 p-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))] transition-all text-left"
+                                className="glass-card flex items-center gap-3 p-3 text-left"
                               >
-                                <div className="w-8 h-8 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0">
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500">
                                   <GitBranch size={14} className="text-white" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -891,7 +891,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                           <button
                             key={index}
                             onClick={() => setDetailSkill(result)}
-                            className="w-full flex items-center justify-between p-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))] transition-all text-left"
+                            className="glass-card flex w-full items-center justify-between p-3 text-left"
                           >
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium truncate">{result.name}</div>
@@ -921,7 +921,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
 
                 {/* 同步目标 - 仅本地标签页显示（Git 标签页在预览状态中单独显示） */}
                 {activeTab === 'local' && (
-                  <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] p-3 sm:p-5 space-y-3">
+                  <div className="glass-card space-y-3 p-3 sm:p-5">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">同步到工具</label>
                       {tools.length > 0 && (
@@ -943,10 +943,10 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                               key={tool.id}
                               type="button"
                               onClick={() => toggleTool(tool.id)}
-                              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-left ${
+                              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                                 enabled
-                                  ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))/5]"
-                                  : "border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))]"
+                                  ? "border-blue-200/70 bg-blue-500/10 dark:border-sky-300/20"
+                                  : "border-white/55 bg-white/50 hover:bg-white/75 dark:border-white/10 dark:bg-white/8 dark:hover:bg-white/12"
                               }`}
                               disabled={loading}
                             >
@@ -954,7 +954,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                                 className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
                                   enabled
                                     ? APP_COLORS[tool.id as keyof typeof APP_COLORS] || "bg-[hsl(var(--foreground))]"
-                                    : "bg-[hsl(var(--muted))] border border-[hsl(var(--border))]"
+                                    : "border border-white/50 bg-white/50 dark:border-white/10 dark:bg-white/8"
                                 }`}
                               >
                                 {enabled && <Check size={12} className="text-white" />}
@@ -965,7 +965,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         未检测到已安装的 AI 工具。
                       </p>
                     )}
@@ -977,10 +977,10 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
 
           {/* 底部按钮 - 在线详情页隐藏 */}
           {!(activeTab === 'online' && detailSkill) && (
-            <div className="flex flex-wrap justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))/30] flex-shrink-0">
+            <div className="flex flex-shrink-0 flex-wrap justify-end gap-2 border-t border-white/50 bg-white/25 px-4 py-3 dark:border-white/10 dark:bg-white/5 sm:gap-3 sm:px-6 sm:py-4">
               <button
                 onClick={onClose}
-                className="px-4 sm:px-5 py-2 sm:py-2.5 bg-[hsl(var(--secondary))] hover:brightness-[0.95] active:brightness-[0.9] text-[hsl(var(--secondary-foreground))] rounded-lg text-sm font-medium transition-all border border-[hsl(var(--border))]"
+                className="glass-secondary-button"
                 disabled={loading}
               >
                 取消
@@ -993,7 +993,7 @@ function AddSkillModal({ open, onClose, tools, syncTargets, onSyncTargetChange, 
                   (activeTab === 'git' && !gitUrl.trim()) ||
                   (activeTab === 'local' && (!localPath.trim() || !localValid))
                 }
-                className="px-4 sm:px-5 py-2 sm:py-2.5 bg-[hsl(var(--primary))] hover:brightness-[0.9] active:brightness-[0.85] text-white rounded-lg text-sm font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="glass-primary-button"
               >
                 {(loading || gitScanLoading) ? (
                   <Loader2 size={16} className="animate-spin" />

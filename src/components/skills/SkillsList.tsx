@@ -148,19 +148,18 @@ function SkillsList({
 
   return (
     <>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {filteredSkills.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[hsl(var(--muted))] flex items-center justify-center mb-4">
+            <div className="glass-empty-icon mb-4">
               <Sparkles
                 size={28}
-                className="text-[hsl(var(--muted-foreground))]"
               />
             </div>
             <h3 className="text-base font-medium mb-1">
               {searchQuery ? '未找到匹配的技能' : '暂无技能'}
             </h3>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {searchQuery ? '尝试其他关键词搜索' : '点击"添加技能"开始管理你的技能'}
             </p>
           </div>
@@ -170,7 +169,7 @@ function SkillsList({
             <div className="flex items-center gap-2 px-3 sm:px-5 py-2 mb-2">
               <button
                 onClick={() => onSelectAll(!allSelected)}
-                className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                className="flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
               >
                 {someSelected ? (
                   <CheckSquare size={16} className="text-[hsl(var(--primary))]" />
@@ -182,7 +181,7 @@ function SkillsList({
                 <span>全选</span>
               </button>
               {selectedSkills.size > 0 && (
-                <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                <span className="glass-pill">
                   已选择 {selectedSkills.size} 项
                 </span>
               )}
@@ -190,8 +189,8 @@ function SkillsList({
             {filteredSkills.map(skill => (
             <div
               key={skill.id}
-              className={`group rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:border-[hsl(var(--ring))] transition-all duration-150 overflow-hidden ${
-                selectedSkills.has(skill.id) ? 'ring-2 ring-[hsl(var(--primary))]' : ''
+              className={`glass-card group overflow-hidden ${
+                selectedSkills.has(skill.id) ? 'ring-2 ring-blue-500/40' : ''
               }`}
             >
               {/* 技能头部 */}
@@ -199,7 +198,7 @@ function SkillsList({
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   <button
                     onClick={() => onSelectionChange(skill.id, !selectedSkills.has(skill.id))}
-                    className="flex-shrink-0"
+                    className="glass-icon-button flex-shrink-0"
                   >
                     {selectedSkills.has(skill.id) ? (
                       <CheckSquare size={18} className="text-[hsl(var(--primary))]" />
@@ -207,7 +206,7 @@ function SkillsList({
                       <Square size={18} className="text-[hsl(var(--muted-foreground))]" />
                     )}
                   </button>
-                  <div className="w-8 h-8 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 shadow-lg shadow-blue-500/15">
                     {isGitHubUrl(skill.source_ref) ? (
                       <Github size={16} className="text-white" />
                     ) : skill.source_type === 'git' ? (
@@ -219,11 +218,11 @@ function SkillsList({
                   <div className="min-w-0 flex-1">
                     <button
                       onClick={() => handleOpenDetail(skill)}
-                      className="text-sm font-semibold truncate hover:text-[hsl(var(--primary))] transition-colors text-left"
+                      className="truncate text-left text-sm font-semibold transition-colors hover:text-blue-600 dark:hover:text-sky-300"
                     >
                       {skill.name}
                     </button>
-                    <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                       {sourceTypeLabel(skill.source_type)}
                     </p>
                   </div>
@@ -234,22 +233,22 @@ function SkillsList({
                     <button
                       onClick={() => handleRefreshGitSkill(skill)}
                       disabled={refreshingSkill === skill.id}
-                      className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors disabled:opacity-50"
+                      className="glass-icon-button"
                       title="从 GitHub 刷新"
                     >
-                      <RefreshCw size={14} className={`text-[hsl(var(--muted-foreground))] ${refreshingSkill === skill.id ? 'animate-spin' : ''}`} />
+                      <RefreshCw size={14} className={refreshingSkill === skill.id ? 'animate-spin' : ''} />
                     </button>
                   )}
                   <button
                     onClick={() => onEditSkill(skill)}
-                    className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                    className="glass-icon-button"
                     title="编辑技能"
                   >
-                    <Pencil size={14} className="text-[hsl(var(--muted-foreground))]" />
+                    <Pencil size={14} />
                   </button>
                   <button
                     onClick={() => onDeleteSkill(skill)}
-                    className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="glass-icon-button hover:text-red-500"
                     title="删除技能"
                   >
                     <Trash2 size={14} className="text-red-500" />
@@ -258,7 +257,7 @@ function SkillsList({
               </div>
 
               {/* 同步目标 */}
-              <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
+              <div className="border-t border-white/50 bg-white/25 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 sm:px-5 sm:py-3">
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {tools.map(tool => {
                     const synced = isToolSynced(skill, tool.id);
@@ -268,10 +267,10 @@ function SkillsList({
                         key={tool.id}
                         onClick={() => !isSyncing && handleToggleSync(skill, tool.id, !synced)}
                         disabled={isSyncing}
-                        className={`inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg transition-all text-xs font-medium ${
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-semibold transition-all sm:px-2.5 sm:py-1.5 ${
                           synced
-                            ? "bg-[hsl(var(--primary))/10] text-[hsl(var(--primary))]"
-                            : "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                            ? "border-blue-200/70 bg-blue-500/10 text-blue-700 dark:border-sky-300/20 dark:text-sky-300"
+                            : "border-white/55 bg-white/50 text-slate-500 hover:text-slate-950 dark:border-white/10 dark:bg-white/8 dark:text-slate-400 dark:hover:text-white"
                         } ${isSyncing ? 'opacity-50' : ''}`}
                       >
                         <div
@@ -297,11 +296,11 @@ function SkillsList({
       {/* 详情弹窗 */}
       {detailSkill && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-[hsl(var(--card))] rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl border border-[hsl(var(--border))] flex flex-col overflow-hidden max-h-[90vh]">
+          <div className="glass-modal flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl">
             {/* 头部 */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[hsl(var(--border))] flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-white/50 px-6 py-5 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 shadow-lg shadow-blue-500/15">
                   {isGitHubUrl(detailSkill.source_ref) ? (
                     <Github size={20} className="text-white" />
                   ) : detailSkill.source_type === 'git' ? (
@@ -312,16 +311,16 @@ function SkillsList({
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">{detailSkill.name}</h3>
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {sourceTypeLabel(detailSkill.source_type)}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setDetailSkill(null)}
-                className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                className="glass-icon-button"
               >
-                <X size={18} className="text-[hsl(var(--muted-foreground))]" />
+                <X size={18} />
               </button>
             </div>
 
@@ -329,7 +328,7 @@ function SkillsList({
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">
               {readmeLoading ? (
                 <div className="flex items-center justify-center h-32">
-                  <div className="text-[hsl(var(--muted-foreground))]">加载中...</div>
+                  <div className="glass-pill">加载中...</div>
                 </div>
               ) : readmeContent ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_p]:text-sm [&_ul]:text-sm [&_ol]:text-sm [&_li]:text-sm [&_code]:bg-[hsl(var(--muted))] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:break-all [&_pre]:bg-[hsl(var(--muted))] [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_a]:text-[hsl(var(--primary))] [&_a]:underline [&_table]:text-sm [&_th]:bg-[hsl(var(--muted))] [&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2 [&_tr]:border [&_table]:block [&_table]:overflow-x-auto">
@@ -337,8 +336,8 @@ function SkillsList({
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-32 text-center">
-                  <FileText size={32} className="text-[hsl(var(--muted-foreground))] mb-2" />
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                  <FileText size={32} className="mb-2 text-slate-400" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     技能目录下没有 SKILL.md 文件
                   </p>
                 </div>
@@ -346,14 +345,14 @@ function SkillsList({
             </div>
 
             {/* 底部 */}
-            <div className="px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted)/30] flex-shrink-0 flex justify-end gap-3">
+            <div className="flex flex-shrink-0 justify-end gap-3 border-t border-white/50 bg-white/25 px-6 py-4 dark:border-white/10 dark:bg-white/5">
               {isGitHubUrl(detailSkill.source_ref) && (
                 <button
                   onClick={() => {
                     handleRefreshGitSkill(detailSkill);
                     setDetailSkill(null);
                   }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-[hsl(var(--secondary-foreground))] transition-all border border-[hsl(var(--border))]"
+                  className="glass-secondary-button"
                 >
                   从 GitHub 刷新
                 </button>
@@ -363,7 +362,7 @@ function SkillsList({
                   setDetailSkill(null);
                   onDeleteSkill(detailSkill);
                 }}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors"
+                className="glass-danger-button"
               >
                 删除
               </button>
@@ -375,24 +374,24 @@ function SkillsList({
       {/* 删除确认弹窗 */}
       {onDeleteId && deleteSkill && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
-          <div className="bg-[hsl(var(--card))] rounded-xl w-full max-w-sm shadow-2xl border border-[hsl(var(--border))] overflow-hidden">
-            <div className="px-6 py-5 border-b border-[hsl(var(--border))]">
+          <div className="glass-modal w-full max-w-sm overflow-hidden rounded-2xl">
+            <div className="border-b border-white/50 px-6 py-5 dark:border-white/10">
               <h3 className="text-lg font-semibold">确认删除？</h3>
-              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1 line-clamp-1">
+              <p className="mt-1 line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
                 技能: {deleteSkill.name}
               </p>
             </div>
             <div className="px-6 py-4 flex justify-end gap-3">
               <button
                 onClick={onCancelDelete}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--secondary))] hover:brightness-[0.95] text-[hsl(var(--secondary-foreground))]"
+                className="glass-secondary-button"
               >
                 取消
               </button>
               <button
                 onClick={onConfirmDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                className="glass-danger-button"
               >
                 {isDeleting ? '删除中...' : '删除'}
               </button>
